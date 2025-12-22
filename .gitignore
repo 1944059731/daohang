@@ -1,0 +1,15 @@
+# 导航站
+
+# 忽略本地开发文件
+.wrangler/
+node_modules/
+.dev.vars
+
+# 忽略系统文件
+.DS_Store
+Thumbs.db
+*.log
+
+# 忽略备份文件
+*.zip
+备份/

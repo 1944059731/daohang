@@ -1,0 +1,1755 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#1e1b4b">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>导航站管理面板</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Toast 动画 */
+        .toast {
+            animation: slideIn 0.3s ease, fadeOut 0.3s ease 2.7s;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+        }
+
+        @keyframes fadeOut {
+            to {
+                opacity: 0;
+            }
+        }
+
+        /* 模态框动画 */
+        .modal-backdrop {
+            transition: opacity 0.2s ease;
+        }
+
+        .modal-content {
+            transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+
+        .modal-backdrop.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .modal-backdrop.hidden .modal-content {
+            transform: scale(0.95);
+            opacity: 0;
+        }
+
+        /* 卡片样式 - 与前台一致 */
+        .site-card {
+            transition: all 0.3s ease;
+            cursor: grab;
+        }
+
+        .site-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .site-card:active {
+            cursor: grabbing;
+        }
+
+        /* 拖拽相关样式 */
+        .site-card.dragging {
+            opacity: 0.5;
+            transform: scale(1.02);
+            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
+        }
+
+        .site-card.drag-over {
+            border: 2px dashed #8b5cf6;
+            background: rgba(139, 92, 246, 0.1);
+        }
+
+        .drop-placeholder {
+            border: 2px dashed #8b5cf6;
+            background: rgba(139, 92, 246, 0.1);
+            border-radius: 1rem;
+            min-height: 120px;
+        }
+
+        /* 图标容器 */
+        .icon-container {
+            width: 48px;
+            height: 48px;
+            min-width: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        /* 外部链接图标 */
+        .external-icon {
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .site-card:hover .external-icon {
+            opacity: 1;
+        }
+
+        /* 操作按钮组 */
+        .card-actions {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .site-card:hover .card-actions {
+            opacity: 1;
+        }
+
+        .card-action-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        /* 分类标签颜色 */
+        .category-dot-common {
+            background: #a78bfa;
+        }
+
+        .category-dot-tier1 {
+            background: #3b82f6;
+        }
+
+        .category-dot-tier2 {
+            background: #14b8a6;
+        }
+
+        .category-dot-stable {
+            background: #22c55e;
+        }
+
+        .category-dot-budget {
+            background: #f97316;
+        }
+
+        /* 移动端响应式 */
+        @media (max-width: 640px) {
+            .btn-group {
+                flex-direction: column;
+            }
+
+            .btn-group button {
+                width: 100%;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            section {
+                padding: 1rem !important;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .card-actions {
+                opacity: 1;
+            }
+        }
+
+        /* 安全区域适配 */
+        body {
+            padding-bottom: env(safe-area-inset-bottom, 0);
+        }
+
+        /* 输入框优化 */
+        input,
+        select,
+        textarea {
+            font-size: 16px;
+        }
+
+        /* 标签页样式 */
+        .tab-btn {
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn.active {
+            background: rgba(139, 92, 246, 0.2);
+            border-color: #8b5cf6;
+            color: #a78bfa;
+        }
+
+        /* 拖拽提示 */
+        .drag-hint {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 0.6;
+            }
+
+            50% {
+                opacity: 1;
+            }
+        }
+
+        /* 自定义 Tooltip - 悬停卡片显示完整描述 */
+        .desc-tooltip {
+            position: relative;
+        }
+
+        /* 卡片悬停时提升层级 */
+        .site-card.desc-tooltip:hover {
+            z-index: 50;
+        }
+
+        .desc-tooltip::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            left: 60px;
+            right: 16px;
+            top: 100%;
+            margin-top: 4px;
+            padding: 10px 14px;
+            background: rgba(30, 27, 75, 0.95);
+            color: #fff;
+            font-size: 13px;
+            line-height: 1.5;
+            border-radius: 10px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+            white-space: normal;
+            box-sizing: border-box;
+            z-index: 9999;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-5px);
+            transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+            pointer-events: none;
+        }
+
+        .desc-tooltip:hover::after {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .dark .desc-tooltip::after {
+            background: rgba(255, 255, 255, 0.95);
+            color: #1e1b4b;
+        }
+    </style>
+</head>
+
+<body
+    class="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-teal-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+    <!-- 背景装饰 -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+        <div class="absolute -top-40 -right-40 w-80 h-80 bg-purple-300/30 rounded-full blur-3xl"></div>
+        <div class="absolute top-1/2 -left-40 w-80 h-80 bg-blue-300/30 rounded-full blur-3xl"></div>
+        <div class="absolute -bottom-40 right-1/3 w-80 h-80 bg-teal-300/30 rounded-full blur-3xl"></div>
+    </div>
+
+    <!-- 登录模态框 -->
+    <div id="loginModal" class="modal-backdrop fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div class="modal-content bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-sm w-full mx-4">
+            <h3 class="text-xl font-semibold mb-4 text-slate-800 dark:text-white text-center">🔐 管理员登录</h3>
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm text-slate-600 dark:text-slate-300 mb-1">管理员密码</label>
+                    <input type="password" id="loginPassword" required placeholder="请输入密码"
+                        class="w-full px-4 py-3 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white focus:border-purple-500 focus:outline-none text-center text-lg">
+                </div>
+                <button type="submit"
+                    class="w-full px-4 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-medium transition-colors">
+                    登录管理后台
+                </button>
+                <p id="loginError" class="text-red-500 text-center text-sm hidden">密码错误，请重试</p>
+            </form>
+            <p class="text-center text-slate-500 text-xs mt-4">仅限管理员访问</p>
+        </div>
+    </div>
+
+    <div class="relative z-10 container mx-auto px-4 py-8" style="max-width: 1152px;">
+        <!-- 头部 -->
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-slate-800 dark:text-white mb-2">🛠️ 导航站管理面板</h1>
+            <p class="text-slate-600 dark:text-slate-400 mb-4">实时同步到线上，数据自动保存到服务器</p>
+            <div class="flex items-center justify-center gap-4">
+                <a href="index.html" class="text-purple-600 dark:text-purple-400 hover:text-purple-500">← 返回导航站</a>
+                <span id="syncStatus" class="text-sm text-green-600 dark:text-green-400">✅ 已连接</span>
+            </div>
+        </header>
+
+        <!-- 操作工具栏 -->
+        <section
+            class="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm rounded-2xl p-4 mb-6 border border-slate-200/70 dark:border-slate-700/70">
+            <div class="flex flex-wrap gap-3 justify-center action-buttons">
+                <button onclick="importFromScript()"
+                    class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition-colors flex items-center gap-2">
+                    📥 从 script.js 导入
+                </button>
+                <button onclick="exportToScript()"
+                    class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg font-medium transition-colors flex items-center gap-2">
+                    📤 导出到 script.js
+                </button>
+                <button onclick="downloadBackup()"
+                    class="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg font-medium transition-colors flex items-center gap-2">
+                    💾 下载备份
+                </button>
+                <label
+                    class="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg font-medium transition-colors flex items-center gap-2 cursor-pointer">
+                    📂 恢复备份
+                    <input type="file" accept=".json" onchange="restoreBackup(event)" class="hidden">
+                </label>
+                <button onclick="openAddModal()"
+                    class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-medium transition-colors flex items-center gap-2">
+                    ➕ 添加网站
+                </button>
+                <button onclick="checkAllLinks()"
+                    class="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-lg font-medium transition-colors flex items-center gap-2">
+                    🔍 检测链接
+                </button>
+            </div>
+            <p class="text-center text-slate-500 dark:text-slate-400 text-sm mt-3 drag-hint">
+                💡 拖拽卡片可调整排序
+            </p>
+        </section>
+
+        <!-- 标签页切换 -->
+        <div class="flex gap-2 mb-6 justify-center">
+            <button onclick="switchTab('sites')" id="tab-sites"
+                class="tab-btn px-6 py-2 rounded-full border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-purple-500 active">
+                🌐 网站管理
+            </button>
+            <button onclick="switchTab('links')" id="tab-links"
+                class="tab-btn px-6 py-2 rounded-full border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-purple-500">
+                🔗 友链管理
+            </button>
+        </div>
+
+        <!-- 网站管理面板 -->
+        <div id="panel-sites">
+            <!-- 网站卡片区域 -->
+            <main id="siteContainer">
+                <!-- 将由 JS 动态生成 -->
+            </main>
+        </div>
+
+        <!-- 友链管理面板 -->
+        <div id="panel-links" class="hidden">
+            <!-- 添加友链表单 -->
+            <section
+                class="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm rounded-2xl p-6 mb-6 border border-slate-200/70 dark:border-slate-700/70">
+                <h2 class="text-xl font-semibold mb-4 text-slate-800 dark:text-white">➕ 添加友情链接</h2>
+                <form id="addLinkForm" class="flex flex-col md:flex-row gap-4">
+                    <div class="flex-1">
+                        <input type="text" id="linkName" required placeholder="网站名称"
+                            class="w-full px-4 py-2 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white focus:border-purple-500 focus:outline-none">
+                    </div>
+                    <div class="flex-1">
+                        <input type="url" id="linkUrl" required placeholder="https://example.com"
+                            class="w-full px-4 py-2 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white focus:border-purple-500 focus:outline-none">
+                    </div>
+                    <button type="submit"
+                        class="px-6 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-medium transition-colors whitespace-nowrap">
+                        添加友链
+                    </button>
+                </form>
+            </section>
+
+            <!-- 友链列表 -->
+            <section
+                class="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm rounded-2xl p-6 border border-slate-200/70 dark:border-slate-700/70">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold text-slate-800 dark:text-white">🔗 友链列表</h2>
+                    <span id="linkCount" class="text-slate-500 dark:text-slate-400 text-sm">0 个友链</span>
+                </div>
+                <div id="linkList" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    <p class="text-slate-500 text-center py-4 col-span-full">暂无友链数据</p>
+                </div>
+            </section>
+        </div>
+
+        <!-- 底部统计 -->
+        <footer class="text-center text-slate-500 dark:text-slate-400 text-sm py-6 mt-8">
+            <p id="statsInfo">共 0 个网站 · 0 个友链</p>
+            <p class="mt-1">数据自动保存到本地浏览器</p>
+        </footer>
+    </div>
+
+    <!-- Toast 通知 -->
+    <div id="toast"
+        class="fixed top-4 right-4 px-6 py-3 bg-green-600 text-white rounded-lg shadow-lg hidden toast z-50"></div>
+
+    <!-- 添加/编辑网站模态框 -->
+    <div id="editModal" class="modal-backdrop fixed inset-0 bg-black/50 flex items-center justify-center z-40 hidden">
+        <div
+            class="modal-content bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <h3 id="modalTitle" class="text-xl font-semibold mb-4 text-slate-800 dark:text-white">➕ 添加网站</h3>
+            <form id="editSiteForm" class="space-y-4">
+                <input type="hidden" id="editSiteId">
+                <input type="hidden" id="editSiteCategory">
+                <input type="hidden" id="editSiteIndex">
+                <div>
+                    <label class="block text-sm text-slate-600 dark:text-slate-300 mb-1">分类 *</label>
+                    <select id="editSiteCategorySelect" required
+                        class="w-full px-4 py-2 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white focus:border-purple-500 focus:outline-none">
+                        <option value="common">常用工具</option>
+                        <option value="tier1">一线机场</option>
+                        <option value="tier2">二线机场</option>
+                        <option value="stable">稳定机场</option>
+                        <option value="budget">低价专区</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm text-slate-600 dark:text-slate-300 mb-1">网站名称 *</label>
+                    <input type="text" id="editSiteName" required placeholder="如：TAG VPN"
+                        class="w-full px-4 py-2 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white focus:border-purple-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm text-slate-600 dark:text-slate-300 mb-1">网站链接 *</label>
+                    <input type="url" id="editSiteUrl" required placeholder="https://example.com"
+                        class="w-full px-4 py-2 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white focus:border-purple-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm text-slate-600 dark:text-slate-300 mb-1">网站描述 *</label>
+                    <input type="text" id="editSiteDesc" required placeholder="简短描述这个网站"
+                        class="w-full px-4 py-2 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white focus:border-purple-500 focus:outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-slate-600 dark:text-slate-300 mb-1">图标 (Emoji)</label>
+                        <input type="text" id="editSiteIcon" maxlength="2" placeholder="🚀"
+                            class="w-full px-4 py-2 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white focus:border-purple-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-600 dark:text-slate-300 mb-1">背景颜色</label>
+                        <select id="editSiteColor"
+                            class="w-full px-4 py-2 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white focus:border-purple-500 focus:outline-none">
+                            <option value="bg-blue-100 dark:bg-blue-900/30">蓝色</option>
+                            <option value="bg-purple-100 dark:bg-purple-900/30">紫色</option>
+                            <option value="bg-green-100 dark:bg-green-900/30">绿色</option>
+                            <option value="bg-orange-100 dark:bg-orange-900/30">橙色</option>
+                            <option value="bg-pink-100 dark:bg-pink-900/30">粉色</option>
+                            <option value="bg-teal-100 dark:bg-teal-900/30">青色</option>
+                            <option value="bg-yellow-100 dark:bg-yellow-900/30">黄色</option>
+                            <option value="bg-indigo-100 dark:bg-indigo-900/30">靛蓝</option>
+                            <option value="bg-sky-100 dark:bg-sky-900/30">天蓝</option>
+                            <option value="bg-rose-100 dark:bg-rose-900/30">玫红</option>
+                            <option value="bg-slate-100 dark:bg-slate-700/30">灰色</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm text-slate-600 dark:text-slate-300 mb-1">自定义图标URL (可选)</label>
+                    <input type="url" id="editSiteIconUrl" placeholder="https://example.com/icon.png"
+                        class="w-full px-4 py-2 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white focus:border-purple-500 focus:outline-none">
+                    <p class="text-xs text-slate-500 mt-1">优先级：自定义图标 → Google Favicon → Emoji</p>
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="submit"
+                        class="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-medium transition-colors">
+                        保存
+                    </button>
+                    <button type="button" onclick="closeEditModal()"
+                        class="flex-1 px-4 py-2 bg-slate-200 dark:bg-slate-600 hover:bg-slate-300 dark:hover:bg-slate-500 text-slate-800 dark:text-white rounded-lg font-medium transition-colors">
+                        取消
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 友链编辑模态框 -->
+    <div id="editLinkModal"
+        class="modal-backdrop fixed inset-0 bg-black/50 flex items-center justify-center z-40 hidden">
+        <div class="modal-content bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-lg w-full mx-4">
+            <h3 class="text-xl font-semibold mb-4 text-slate-800 dark:text-white">✏️ 编辑友链</h3>
+            <form id="editLinkForm" class="space-y-4">
+                <input type="hidden" id="editLinkId">
+                <div>
+                    <label class="block text-sm text-slate-600 dark:text-slate-300 mb-1">网站名称 *</label>
+                    <input type="text" id="editLinkName" required
+                        class="w-full px-4 py-2 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white focus:border-purple-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm text-slate-600 dark:text-slate-300 mb-1">网站链接 *</label>
+                    <input type="url" id="editLinkUrl" required
+                        class="w-full px-4 py-2 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white focus:border-purple-500 focus:outline-none">
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="submit"
+                        class="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-medium transition-colors">
+                        保存修改
+                    </button>
+                    <button type="button" onclick="closeEditLinkModal()"
+                        class="flex-1 px-4 py-2 bg-slate-200 dark:bg-slate-600 hover:bg-slate-300 dark:hover:bg-slate-500 text-slate-800 dark:text-white rounded-lg font-medium transition-colors">
+                        取消
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 链接检测模态框 -->
+    <div id="linkCheckModal"
+        class="modal-backdrop fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+        <div
+            class="modal-content bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-3xl w-full mx-4 max-h-[85vh] flex flex-col">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold text-slate-800 dark:text-white">🔍 链接批量检测</h3>
+                <button onclick="closeLinkCheckModal()"
+                    class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-2xl">&times;</button>
+            </div>
+
+            <!-- 提示信息 -->
+            <div id="checkTips"
+                class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-3 mb-4 text-sm text-amber-800 dark:text-amber-200">
+                <p class="font-medium mb-1">⚠️ 检测须知：</p>
+                <ul class="list-disc list-inside space-y-0.5 text-xs">
+                    <li>检测较为耗时，检测期间请勿关闭此页面</li>
+                    <li>部分网站启用了 CDN 或防火墙，可能显示为"未知"状态</li>
+                    <li>检测结果仅供参考，具体以实际访问为准</li>
+                </ul>
+            </div>
+
+            <!-- 进度条 -->
+            <div id="checkProgress" class="mb-4">
+                <div class="flex justify-between text-sm text-slate-600 dark:text-slate-400 mb-1">
+                    <span id="checkProgressText">点击下方按钮开始检测</span>
+                    <span id="checkProgressPercent">0%</span>
+                </div>
+                <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3">
+                    <div id="checkProgressBar"
+                        class="bg-gradient-to-r from-purple-500 to-indigo-500 h-3 rounded-full transition-all duration-300 relative"
+                        style="width: 0%">
+                        <span class="absolute right-2 top-0 text-[10px] text-white font-medium leading-3"
+                            id="checkProgressInner"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 统计摘要 -->
+            <div id="checkSummary" class="grid grid-cols-5 gap-2 mb-4 hidden">
+                <div class="bg-green-100 dark:bg-green-900/30 rounded-lg p-2 text-center cursor-pointer hover:ring-2 ring-green-500"
+                    onclick="filterResults('ok')">
+                    <div class="text-xl font-bold text-green-600 dark:text-green-400" id="countOk">0</div>
+                    <div class="text-xs text-green-700 dark:text-green-300">✅ 正常</div>
+                </div>
+                <div class="bg-red-100 dark:bg-red-900/30 rounded-lg p-2 text-center cursor-pointer hover:ring-2 ring-red-500"
+                    onclick="filterResults('error')">
+                    <div class="text-xl font-bold text-red-600 dark:text-red-400" id="countError">0</div>
+                    <div class="text-xs text-red-700 dark:text-red-300">❌ 异常</div>
+                </div>
+                <div class="bg-yellow-100 dark:bg-yellow-900/30 rounded-lg p-2 text-center cursor-pointer hover:ring-2 ring-yellow-500"
+                    onclick="filterResults('timeout')">
+                    <div class="text-xl font-bold text-yellow-600 dark:text-yellow-400" id="countTimeout">0</div>
+                    <div class="text-xs text-yellow-700 dark:text-yellow-300">⏱️ 超时</div>
+                </div>
+                <div class="bg-cyan-100 dark:bg-cyan-900/30 rounded-lg p-2 text-center cursor-pointer hover:ring-2 ring-cyan-500"
+                    onclick="filterResults('unknown')">
+                    <div class="text-xl font-bold text-cyan-600 dark:text-cyan-400" id="countUnknown">0</div>
+                    <div class="text-xs text-cyan-700 dark:text-cyan-300">❓ 未知</div>
+                </div>
+                <div class="bg-slate-100 dark:bg-slate-700/50 rounded-lg p-2 text-center cursor-pointer hover:ring-2 ring-slate-500"
+                    onclick="filterResults('all')">
+                    <div class="text-xl font-bold text-slate-600 dark:text-slate-400" id="countTotal">0</div>
+                    <div class="text-xs text-slate-700 dark:text-slate-300">📊 全部</div>
+                </div>
+            </div>
+
+            <!-- 结果列表 -->
+            <div id="checkResults" class="flex-1 overflow-y-auto space-y-2 min-h-[200px] max-h-[350px]">
+                <div class="text-center py-8">
+                    <p class="text-slate-500 mb-4">准备检测所有网站和友链的可访问性</p>
+                    <button onclick="startLinkCheck()" id="btnStartCheck"
+                        class="px-6 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-medium transition-colors">
+                        🚀 开始检测
+                    </button>
+                </div>
+            </div>
+
+            <!-- 底部按钮 -->
+            <div class="flex gap-3 pt-4 mt-4 border-t border-slate-200 dark:border-slate-700">
+                <button onclick="filterResults('problems')" id="btnShowProblems"
+                    class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg font-medium transition-colors hidden">
+                    ⚠️ 仅显示问题
+                </button>
+                <button onclick="exportCheckResults()" id="btnExportResults"
+                    class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition-colors hidden">
+                    📋 导出报告
+                </button>
+                <button onclick="closeLinkCheckModal()"
+                    class="flex-1 px-4 py-2 bg-slate-200 dark:bg-slate-600 hover:bg-slate-300 dark:hover:bg-slate-500 text-slate-800 dark:text-white rounded-lg font-medium transition-colors">
+                    关闭
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 配置和状态 ====================
+        const STORAGE_KEY = 'navsite_data';
+        const API_BASE = '/api';
+
+        // 认证状态
+        let authToken = localStorage.getItem('admin_token') || null;
+        let isLoggedIn = false;
+
+        const categoryNames = {
+            common: '常用工具',
+            tier1: '一线机场',
+            tier2: '二线机场',
+            stable: '稳定机场',
+            budget: '低价专区'
+        };
+
+        const categoryDots = {
+            common: 'category-dot-common',
+            tier1: 'category-dot-tier1',
+            tier2: 'category-dot-tier2',
+            stable: 'category-dot-stable',
+            budget: 'category-dot-budget'
+        };
+
+        // 初始化数据
+        let siteData = {
+            common: [],
+            tier1: [],
+            tier2: [],
+            stable: [],
+            budget: [],
+            friendLinks: []
+        };
+
+        // 拖拽状态
+        let draggedElement = null;
+        let draggedCategory = null;
+        let draggedIndex = null;
+
+        // ==================== 认证功能 ====================
+
+        async function login(password) {
+            try {
+                const response = await fetch(`${API_BASE}/auth`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    authToken = data.token;
+                    localStorage.setItem('admin_token', authToken);
+                    isLoggedIn = true;
+                    return true;
+                } else {
+                    return false;
+                }
+            } catch (error) {
+                console.error('登录失败:', error);
+                return false;
+            }
+        }
+
+        function showLoginModal() {
+            document.getElementById('loginModal').classList.remove('hidden');
+        }
+
+        function hideLoginModal() {
+            document.getElementById('loginModal').classList.add('hidden');
+        }
+
+        // 登录表单处理
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('loginForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const password = document.getElementById('loginPassword').value;
+                const errorEl = document.getElementById('loginError');
+
+                const success = await login(password);
+                if (success) {
+                    hideLoginModal();
+                    errorEl.classList.add('hidden');
+                    await loadFromAPI();
+                    renderAll();
+                    updateSyncStatus('connected');
+                } else {
+                    errorEl.classList.remove('hidden');
+                }
+            });
+        });
+
+        // ==================== API 数据操作 ====================
+
+        async function loadFromAPI() {
+            try {
+                const response = await fetch(`${API_BASE}/sites`);
+                if (response.ok) {
+                    const data = await response.json();
+                    siteData = {
+                        common: data.common || [],
+                        tier1: data.tier1 || [],
+                        tier2: data.tier2 || [],
+                        stable: data.stable || [],
+                        budget: data.budget || [],
+                        friendLinks: data.friendLinks || []
+                    };
+                    // 同时保存到本地作为备份
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(siteData));
+                    console.log('✅ 数据已从 API 加载');
+                    return true;
+                }
+            } catch (error) {
+                console.warn('⚠️ API 加载失败，尝试从本地恢复:', error);
+            }
+            // 降级到本地存储
+            loadFromStorage();
+            return false;
+        }
+
+        async function saveToAPI() {
+            if (!authToken) {
+                showToast('请先登录', 'error');
+                showLoginModal();
+                return false;
+            }
+
+            try {
+                updateSyncStatus('syncing');
+
+                const response = await fetch(`${API_BASE}/sites`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(siteData)
+                });
+
+                if (response.ok) {
+                    updateSyncStatus('connected');
+                    console.log('✅ 数据已同步到服务器');
+                    return true;
+                } else if (response.status === 401) {
+                    // Token 过期，需要重新登录
+                    authToken = null;
+                    localStorage.removeItem('admin_token');
+                    showToast('登录已过期，请重新登录', 'error');
+                    showLoginModal();
+                    updateSyncStatus('disconnected');
+                    return false;
+                } else {
+                    throw new Error('保存失败');
+                }
+            } catch (error) {
+                console.error('保存到 API 失败:', error);
+                updateSyncStatus('error');
+                showToast('同步失败，数据已保存到本地', 'error');
+                return false;
+            }
+        }
+
+        function updateSyncStatus(status) {
+            const el = document.getElementById('syncStatus');
+            switch (status) {
+                case 'connected':
+                    el.textContent = '✅ 已连接';
+                    el.className = 'text-sm text-green-600 dark:text-green-400';
+                    break;
+                case 'syncing':
+                    el.textContent = '🔄 同步中...';
+                    el.className = 'text-sm text-yellow-600 dark:text-yellow-400';
+                    break;
+                case 'disconnected':
+                    el.textContent = '⚠️ 未连接';
+                    el.className = 'text-sm text-red-600 dark:text-red-400';
+                    break;
+                case 'error':
+                    el.textContent = '❌ 同步失败';
+                    el.className = 'text-sm text-red-600 dark:text-red-400';
+                    break;
+            }
+        }
+
+        // 页面加载时检查登录状态
+        document.addEventListener('DOMContentLoaded', async () => {
+            initDarkMode();
+
+            // 如果有 token，尝试加载数据验证 token 是否有效
+            if (authToken) {
+                const apiLoaded = await loadFromAPI();
+                if (apiLoaded) {
+                    isLoggedIn = true;
+                    hideLoginModal();
+                    renderAll();
+                    updateSyncStatus('connected');
+                } else {
+                    // API 不可用或 token 无效，显示登录框
+                    loadFromStorage();
+                    renderAll();
+                    showLoginModal();
+                    updateSyncStatus('disconnected');
+                }
+            } else {
+                // 没有 token，显示登录框
+                loadFromStorage();
+                renderAll();
+                showLoginModal();
+                updateSyncStatus('disconnected');
+            }
+        });
+
+        // ==================== 暗色模式 ====================
+
+        function initDarkMode() {
+            const savedTheme = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+                document.documentElement.classList.add('dark');
+            }
+        }
+
+        // ==================== 数据持久化 ====================
+
+        function saveToStorage() {
+            // 保存到本地作为备份
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(siteData));
+            // 同时尝试保存到 API
+            saveToAPI();
+        }
+
+        function loadFromStorage() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                try {
+                    siteData = JSON.parse(saved);
+                    if (!siteData.common) siteData.common = [];
+                    if (!siteData.tier1) siteData.tier1 = [];
+                    if (!siteData.tier2) siteData.tier2 = [];
+                    if (!siteData.stable) siteData.stable = [];
+                    if (!siteData.budget) siteData.budget = [];
+                    if (!siteData.friendLinks) siteData.friendLinks = [];
+                } catch (e) {
+                    console.error('加载数据失败:', e);
+                }
+            }
+        }
+
+        // ==================== 通知 ====================
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg toast z-50 text-white ${type === 'success' ? 'bg-green-600' : 'bg-red-600'}`;
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+
+        // ==================== 渲染 ====================
+
+        function renderAll() {
+            renderSiteContainer();
+            renderLinkList();
+            updateStats();
+        }
+
+        function renderSiteContainer() {
+            const container = document.getElementById('siteContainer');
+            const categories = ['common', 'tier1', 'tier2', 'stable', 'budget'];
+
+            let html = '';
+            categories.forEach(cat => {
+                const sites = siteData[cat] || [];
+                html += `
+                    <section id="${cat}" class="mb-10">
+                        <div class="flex items-center gap-2 mb-4">
+                            <span class="w-2 h-2 rounded-full ${categoryDots[cat]}"></span>
+                            <h2 class="text-xl font-bold text-slate-800 dark:text-white">${categoryNames[cat]}</h2>
+                            <span class="text-slate-500 text-sm">(${sites.length})</span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" 
+                             id="${cat}-cards"
+                             data-category="${cat}"
+                             ondragover="handleDragOver(event)"
+                             ondrop="handleDrop(event)">
+                            ${sites.length > 0 ? sites.map((site, index) => createSiteCard(site, cat, index)).join('') :
+                        `<div class="col-span-full text-center py-8 text-slate-400 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl">
+                                  暂无网站，点击上方"添加网站"或拖拽其他分类的卡片到这里
+                              </div>`}
+                        </div>
+                    </section>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // 获取 favicon URL
+        function getFaviconUrl(url, size = 32) {
+            try {
+                const domain = new URL(url).hostname;
+                return `https://www.google.com/s2/favicons?domain=${domain}&sz=${size}`;
+            } catch {
+                return null;
+            }
+        }
+
+        // 创建网站卡片 - 与前台一致的样式
+        function createSiteCard(site, category, index) {
+            const faviconUrl = getFaviconUrl(site.url);
+            const customIconUrl = site.iconUrl || '';
+            const emojiIcon = site.icon || '🔗';
+
+            // 优先级：自定义图标URL（如有）→ Google Favicon → Emoji
+            let iconHtml;
+            if (customIconUrl) {
+                // 有自定义图标URL时，优先使用自定义图标，失败时显示Emoji
+                iconHtml = `<img src="${customIconUrl}" alt="${site.name}" class="w-6 h-6 rounded" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
+                   <span style="display:none">${emojiIcon}</span>`;
+            } else if (faviconUrl) {
+                // 没有自定义图标时，使用 Google Favicon，失败时显示Emoji
+                iconHtml = `<img src="${faviconUrl}" alt="${site.name}" class="w-6 h-6 rounded" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
+                   <span style="display:none">${emojiIcon}</span>`;
+            } else {
+                // 都没有，直接显示 Emoji
+                iconHtml = emojiIcon;
+            }
+
+            return `
+                <div class="site-card desc-tooltip relative block p-4 rounded-2xl bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border border-slate-200/70 dark:border-slate-700/70 hover:bg-white dark:hover:bg-slate-700/90"
+                     data-tooltip="${site.desc}"
+                     draggable="true"
+                     data-category="${category}"
+                     data-index="${index}"
+                     ondragstart="handleDragStart(event)"
+                     ondragend="handleDragEnd(event)"
+                     ondragover="handleCardDragOver(event)"
+                     ondragleave="handleCardDragLeave(event)">
+                    
+                    <!-- 操作按钮 -->
+                    <div class="card-actions">
+                        <button onclick="event.stopPropagation(); editSite('${category}', ${index})" 
+                            class="card-action-btn bg-blue-500 hover:bg-blue-400 text-white" title="编辑">
+                            ✏️
+                        </button>
+                        <button onclick="event.stopPropagation(); deleteSite('${category}', ${index})" 
+                            class="card-action-btn bg-red-500 hover:bg-red-400 text-white" title="删除">
+                            🗑️
+                        </button>
+                    </div>
+
+                    <div class="flex items-start gap-3">
+                        <div class="icon-container ${site.color}">
+                            ${iconHtml}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2">
+                                <h3 class="font-semibold text-slate-800 dark:text-white truncate">${site.name}</h3>
+                                <svg class="external-icon w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                </svg>
+                            </div>
+                            <p class="text-sm text-slate-600 dark:text-slate-400 mt-1 line-clamp-2">${site.desc}</p>
+                            <p class="text-xs text-slate-400 dark:text-slate-500 mt-2">${site.domain}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ==================== 拖拽功能 ====================
+
+        function handleDragStart(event) {
+            draggedElement = event.target;
+            draggedCategory = event.target.dataset.category;
+            draggedIndex = parseInt(event.target.dataset.index);
+
+            event.target.classList.add('dragging');
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', `${draggedCategory}:${draggedIndex}`);
+        }
+
+        function handleDragEnd(event) {
+            event.target.classList.remove('dragging');
+            document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+            draggedElement = null;
+            draggedCategory = null;
+            draggedIndex = null;
+        }
+
+        function handleDragOver(event) {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+        }
+
+        function handleCardDragOver(event) {
+            event.preventDefault();
+            if (event.target.closest('.site-card') && event.target.closest('.site-card') !== draggedElement) {
+                event.target.closest('.site-card').classList.add('drag-over');
+            }
+        }
+
+        function handleCardDragLeave(event) {
+            event.target.closest('.site-card')?.classList.remove('drag-over');
+        }
+
+        function handleDrop(event) {
+            event.preventDefault();
+
+            const targetContainer = event.target.closest('[data-category]');
+            if (!targetContainer) return;
+
+            const targetCategory = targetContainer.dataset.category;
+            const targetCard = event.target.closest('.site-card');
+
+            // 获取被拖拽的网站数据
+            const site = siteData[draggedCategory][draggedIndex];
+
+            // 从原位置删除
+            siteData[draggedCategory].splice(draggedIndex, 1);
+
+            // 确定插入位置
+            if (targetCard && targetCard !== draggedElement) {
+                const targetIndex = parseInt(targetCard.dataset.index);
+                // 插入到目标卡片的位置
+                if (draggedCategory === targetCategory && draggedIndex < targetIndex) {
+                    siteData[targetCategory].splice(targetIndex, 0, site);
+                } else {
+                    siteData[targetCategory].splice(targetIndex, 0, site);
+                }
+            } else {
+                // 插入到分类末尾
+                siteData[targetCategory].push(site);
+            }
+
+            saveToStorage();
+            renderSiteContainer();
+            updateStats();
+            showToast('排序已更新');
+        }
+
+        // ==================== 标签页切换 ====================
+
+        function switchTab(tab) {
+            document.getElementById('panel-sites').classList.toggle('hidden', tab !== 'sites');
+            document.getElementById('panel-links').classList.toggle('hidden', tab !== 'links');
+            document.getElementById('tab-sites').classList.toggle('active', tab === 'sites');
+            document.getElementById('tab-links').classList.toggle('active', tab === 'links');
+        }
+
+        // ==================== 网站管理 ====================
+
+        function openAddModal() {
+            document.getElementById('modalTitle').textContent = '➕ 添加网站';
+            document.getElementById('editSiteForm').reset();
+            document.getElementById('editSiteId').value = '';
+            document.getElementById('editSiteCategory').value = '';
+            document.getElementById('editSiteIndex').value = '';
+            document.getElementById('editSiteCategorySelect').disabled = false;
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+
+        function editSite(category, index) {
+            const site = siteData[category][index];
+            document.getElementById('modalTitle').textContent = '✏️ 编辑网站';
+            document.getElementById('editSiteId').value = site.id || '';
+            document.getElementById('editSiteCategory').value = category;
+            document.getElementById('editSiteIndex').value = index;
+            document.getElementById('editSiteCategorySelect').value = category;
+            document.getElementById('editSiteCategorySelect').disabled = false;
+            document.getElementById('editSiteName').value = site.name;
+            document.getElementById('editSiteUrl').value = site.url;
+            document.getElementById('editSiteDesc').value = site.desc;
+            document.getElementById('editSiteIcon').value = site.icon;
+            document.getElementById('editSiteIconUrl').value = site.iconUrl || '';
+            document.getElementById('editSiteColor').value = site.color;
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
+        }
+
+        document.getElementById('editSiteForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const url = document.getElementById('editSiteUrl').value;
+            let domain;
+            try {
+                domain = new URL(url).hostname.replace('www.', '');
+            } catch {
+                domain = url;
+            }
+
+            const site = {
+                id: document.getElementById('editSiteId').value || Date.now(),
+                name: document.getElementById('editSiteName').value,
+                desc: document.getElementById('editSiteDesc').value,
+                url: url,
+                domain: domain,
+                icon: document.getElementById('editSiteIcon').value || '🔗',
+                iconUrl: document.getElementById('editSiteIconUrl').value || '',
+                color: document.getElementById('editSiteColor').value
+            };
+
+            const oldCategory = document.getElementById('editSiteCategory').value;
+            const newCategory = document.getElementById('editSiteCategorySelect').value;
+            const index = document.getElementById('editSiteIndex').value;
+
+            if (index !== '' && oldCategory) {
+                // 编辑模式
+                if (oldCategory === newCategory) {
+                    siteData[oldCategory][parseInt(index)] = site;
+                } else {
+                    // 分类改变了
+                    siteData[oldCategory].splice(parseInt(index), 1);
+                    siteData[newCategory].push(site);
+                }
+                showToast('网站已更新');
+            } else {
+                // 添加模式
+                siteData[newCategory].push(site);
+                showToast('网站已添加');
+            }
+
+            saveToStorage();
+            renderSiteContainer();
+            updateStats();
+            closeEditModal();
+        });
+
+        function deleteSite(category, index) {
+            if (!confirm('确定要删除这个网站吗？')) return;
+            siteData[category].splice(index, 1);
+            saveToStorage();
+            renderSiteContainer();
+            updateStats();
+            showToast('网站已删除');
+        }
+
+        // ==================== 友链管理 ====================
+
+        document.getElementById('addLinkForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const link = {
+                id: Date.now(),
+                name: document.getElementById('linkName').value,
+                url: document.getElementById('linkUrl').value
+            };
+            siteData.friendLinks.push(link);
+            saveToStorage();
+            renderLinkList();
+            updateStats();
+            e.target.reset();
+            showToast('友链已添加');
+        });
+
+        function renderLinkList() {
+            const container = document.getElementById('linkList');
+            const links = siteData.friendLinks || [];
+
+            if (links.length === 0) {
+                container.innerHTML = '<p class="text-slate-500 text-center py-4 col-span-full">暂无友链数据</p>';
+            } else {
+                container.innerHTML = links.map((link, index) => `
+                    <div class="relative group p-3 rounded-xl bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-slate-600/50">
+                        <div class="font-medium text-slate-700 dark:text-slate-300 truncate">${link.name}</div>
+                        <div class="text-xs text-slate-500 truncate">${link.url}</div>
+                        <div class="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onclick="editLink(${index})" class="w-6 h-6 rounded bg-blue-500 hover:bg-blue-400 text-white text-xs flex items-center justify-center">✏️</button>
+                            <button onclick="deleteLink(${index})" class="w-6 h-6 rounded bg-red-500 hover:bg-red-400 text-white text-xs flex items-center justify-center">🗑️</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            document.getElementById('linkCount').textContent = `${links.length} 个友链`;
+        }
+
+        function editLink(index) {
+            const link = siteData.friendLinks[index];
+            document.getElementById('editLinkId').value = index;
+            document.getElementById('editLinkName').value = link.name;
+            document.getElementById('editLinkUrl').value = link.url;
+            document.getElementById('editLinkModal').classList.remove('hidden');
+        }
+
+        function closeEditLinkModal() {
+            document.getElementById('editLinkModal').classList.add('hidden');
+        }
+
+        document.getElementById('editLinkForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const index = parseInt(document.getElementById('editLinkId').value);
+            siteData.friendLinks[index] = {
+                ...siteData.friendLinks[index],
+                name: document.getElementById('editLinkName').value,
+                url: document.getElementById('editLinkUrl').value
+            };
+            saveToStorage();
+            renderLinkList();
+            closeEditLinkModal();
+            showToast('友链已更新');
+        });
+
+        function deleteLink(index) {
+            if (!confirm('确定要删除这个友链吗？')) return;
+            siteData.friendLinks.splice(index, 1);
+            saveToStorage();
+            renderLinkList();
+            updateStats();
+            showToast('友链已删除');
+        }
+
+        // ==================== 统计 ====================
+
+        function updateStats() {
+            const categories = ['common', 'tier1', 'tier2', 'stable', 'budget'];
+            const totalSites = categories.reduce((sum, cat) => sum + (siteData[cat]?.length || 0), 0);
+            const totalLinks = siteData.friendLinks?.length || 0;
+            document.getElementById('statsInfo').textContent = `共 ${totalSites} 个网站 · ${totalLinks} 个友链`;
+        }
+
+        // ==================== 导入导出 ====================
+
+        async function importFromScript() {
+            try {
+                const response = await fetch('script.js');
+                const text = await response.text();
+
+                const match = text.match(/const\s+siteData\s*=\s*(\{[\s\S]*?\n\};)/);
+                if (!match) {
+                    showToast('无法解析 script.js 中的数据', 'error');
+                    return;
+                }
+
+                const extractedData = new Function('return ' + match[1].slice(0, -1))();
+
+                siteData = {
+                    common: extractedData.common || [],
+                    tier1: extractedData.tier1 || [],
+                    tier2: extractedData.tier2 || [],
+                    stable: extractedData.stable || [],
+                    budget: extractedData.budget || [],
+                    friendLinks: extractedData.friendLinks || []
+                };
+
+                saveToStorage();
+                renderAll();
+                showToast('数据导入成功！');
+            } catch (error) {
+                console.error('导入失败:', error);
+                showToast('导入失败: ' + error.message, 'error');
+            }
+        }
+
+        function exportToScript() {
+            const generateSiteCode = (sites) => {
+                if (!sites || sites.length === 0) return '[]';
+                return '[\n' + sites.map(site => {
+                    let code = `        {
+            name: "${site.name}",
+            desc: "${site.desc}",
+            url: "${site.url}",
+            domain: "${site.domain}",
+            icon: "${site.icon}",`;
+                    // 只有当iconUrl有值时才添加
+                    if (site.iconUrl) {
+                        code += `
+            iconUrl: "${site.iconUrl}",`;
+                    }
+                    code += `
+            color: "${site.color}"
+        }`;
+                    return code;
+                }).join(',\n') + '\n    ]';
+            };
+
+            const generateLinkCode = (links) => {
+                if (!links || links.length === 0) return '[]';
+                return '[\n' + links.map(link => `        { name: "${link.name}", url: "${link.url}" }`).join(',\n') + '\n    ]';
+            };
+
+            const siteDataCode = `// 导航站数据
+const siteData = {
+    common: ${generateSiteCode(siteData.common)},
+    tier1: ${generateSiteCode(siteData.tier1)},
+    tier2: ${generateSiteCode(siteData.tier2)},
+    stable: ${generateSiteCode(siteData.stable)},
+    budget: ${generateSiteCode(siteData.budget)},
+    friendLinks: ${generateLinkCode(siteData.friendLinks)}
+};`;
+
+            fetch('script.js')
+                .then(r => r.text())
+                .then(originalCode => {
+                    const newCode = originalCode.replace(
+                        /\/\/ 导航站数据[\s\S]*?^};/m,
+                        siteDataCode
+                    );
+
+                    const blob = new Blob([newCode], { type: 'text/javascript' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'script.js';
+                    a.click();
+                    URL.revokeObjectURL(url);
+
+                    showToast('script.js 已生成，请替换原文件');
+                })
+                .catch(error => {
+                    console.error('导出失败:', error);
+                    showToast('导出失败: ' + error.message, 'error');
+                });
+        }
+
+        function downloadBackup() {
+            const backup = {
+                version: 1,
+                exportTime: new Date().toISOString(),
+                data: siteData
+            };
+
+            const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `navsite-backup-${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            showToast('备份已下载');
+        }
+
+        function restoreBackup(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const backup = JSON.parse(e.target.result);
+                    if (backup.data) {
+                        siteData = backup.data;
+                        saveToStorage();
+                        renderAll();
+                        showToast('备份已恢复');
+                    } else {
+                        showToast('无效的备份文件', 'error');
+                    }
+                } catch (error) {
+                    showToast('解析备份失败', 'error');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        // 点击模态框背景关闭
+        document.getElementById('editModal').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) closeEditModal();
+        });
+        document.getElementById('editLinkModal').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) closeEditLinkModal();
+        });
+        document.getElementById('linkCheckModal').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) closeLinkCheckModal();
+        });
+
+        // ==================== 链接检测功能（参考OneNav优化） ====================
+
+        let checkResults = [];
+        let isChecking = false;
+        const CONCURRENT_LIMIT = 5; // 并发检测数量
+
+        function openLinkCheckModal() {
+            document.getElementById('linkCheckModal').classList.remove('hidden');
+        }
+
+        function closeLinkCheckModal() {
+            document.getElementById('linkCheckModal').classList.add('hidden');
+            isChecking = false;
+        }
+
+        // 收集所有链接
+        function collectAllLinks() {
+            const links = [];
+            const categories = ['common', 'tier1', 'tier2', 'stable', 'budget'];
+
+            categories.forEach(category => {
+                if (siteData[category]) {
+                    siteData[category].forEach((site, index) => {
+                        links.push({
+                            category: categoryNames[category],
+                            categoryKey: category,
+                            index: index,
+                            name: site.name,
+                            url: site.url,
+                            iconUrl: site.iconUrl || null
+                        });
+                    });
+                }
+            });
+
+            // 添加友链
+            if (siteData.friendLinks) {
+                siteData.friendLinks.forEach((link, index) => {
+                    links.push({
+                        category: '友情链接',
+                        categoryKey: 'friendLinks',
+                        index: index,
+                        name: link.name,
+                        url: link.url,
+                        iconUrl: null
+                    });
+                });
+            }
+
+            return links;
+        }
+
+        // 检测单个链接（带CDN识别）
+        async function checkSingleLink(url, timeout = 8000) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+            // CDN/WAF 关键词列表
+            const cdnKeywords = ['cloudflare', 'akamai', 'cloudfront', 'fastly', 'cdn'];
+
+            try {
+                const response = await fetch(url, {
+                    method: 'HEAD',
+                    mode: 'no-cors',
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
+                // 检查URL是否包含CDN关键词
+                const urlLower = url.toLowerCase();
+                for (const keyword of cdnKeywords) {
+                    if (urlLower.includes(keyword)) {
+                        return { status: 'unknown', message: '可能有CDN' };
+                    }
+                }
+
+                return { status: 'ok', message: '可访问' };
+            } catch (error) {
+                clearTimeout(timeoutId);
+                if (error.name === 'AbortError') {
+                    return { status: 'timeout', message: '请求超时' };
+                }
+                // 某些 CORS 错误可能是因为 CDN/WAF 阻止
+                if (error.message && error.message.includes('CORS')) {
+                    return { status: 'unknown', message: '跨域限制' };
+                }
+                return { status: 'error', message: '无法访问' };
+            }
+        }
+
+        // 检测自定义图标URL
+        async function checkIconUrl(url) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                const timeout = setTimeout(() => {
+                    resolve({ status: 'timeout', message: '图标加载超时' });
+                }, 5000);
+
+                img.onload = () => {
+                    clearTimeout(timeout);
+                    resolve({ status: 'ok', message: '图标正常' });
+                };
+                img.onerror = () => {
+                    clearTimeout(timeout);
+                    resolve({ status: 'error', message: '图标无法加载' });
+                };
+                img.src = url;
+            });
+        }
+
+        // 并发检测链接
+        async function checkLinksInBatches(links, batchSize, onProgress) {
+            const results = [];
+            for (let i = 0; i < links.length; i += batchSize) {
+                if (!isChecking) break;
+
+                const batch = links.slice(i, i + batchSize);
+                const batchPromises = batch.map(async (link) => {
+                    const urlResult = await checkSingleLink(link.url);
+                    let iconResult = null;
+                    if (link.iconUrl) {
+                        iconResult = await checkIconUrl(link.iconUrl);
+                    }
+                    return {
+                        ...link,
+                        urlStatus: urlResult.status,
+                        urlMessage: urlResult.message,
+                        iconStatus: iconResult ? iconResult.status : null,
+                        iconMessage: iconResult ? iconResult.message : null
+                    };
+                });
+
+                const batchResults = await Promise.all(batchPromises);
+                results.push(...batchResults);
+
+                // 回调进度
+                if (onProgress) {
+                    onProgress(results.length, links.length, batchResults);
+                }
+            }
+            return results;
+        }
+
+        // 开始检测（从模态框内按钮触发）
+        async function startLinkCheck() {
+            if (isChecking) {
+                showToast('正在检测中，请稍候', 'warning');
+                return;
+            }
+
+            isChecking = true;
+            checkResults = [];
+
+            const links = collectAllLinks();
+            const total = links.length;
+
+            if (total === 0) {
+                showToast('没有可检测的链接', 'warning');
+                isChecking = false;
+                return;
+            }
+
+            // 隐藏提示和开始按钮
+            document.getElementById('checkTips').classList.add('hidden');
+            document.getElementById('btnStartCheck')?.parentElement?.remove();
+
+            // 重置UI
+            document.getElementById('checkProgressText').textContent = '正在检测...';
+            document.getElementById('checkProgressPercent').textContent = '0%';
+            document.getElementById('checkProgressBar').style.width = '0%';
+            document.getElementById('checkSummary').classList.add('hidden');
+            document.getElementById('btnExportResults').classList.add('hidden');
+            document.getElementById('btnShowProblems').classList.add('hidden');
+            document.getElementById('checkResults').innerHTML = '';
+
+            // 并发检测
+            await checkLinksInBatches(links, CONCURRENT_LIMIT, (completed, total, batchResults) => {
+                const percent = Math.round((completed / total) * 100);
+                document.getElementById('checkProgressText').textContent = `正在检测 ${completed}/${total}...`;
+                document.getElementById('checkProgressPercent').textContent = `${percent}%`;
+                document.getElementById('checkProgressBar').style.width = `${percent}%`;
+                document.getElementById('checkProgressInner').textContent = percent > 15 ? `${percent}%` : '';
+
+                // 添加批量结果
+                batchResults.forEach(result => {
+                    checkResults.push(result);
+                    appendResultItem(result);
+                });
+            });
+
+            // 统计
+            const stats = {
+                ok: checkResults.filter(r => r.urlStatus === 'ok').length,
+                error: checkResults.filter(r => r.urlStatus === 'error').length,
+                timeout: checkResults.filter(r => r.urlStatus === 'timeout').length,
+                unknown: checkResults.filter(r => r.urlStatus === 'unknown').length
+            };
+
+            // 显示统计摘要
+            document.getElementById('checkProgressText').textContent = '✅ 检测完成';
+            document.getElementById('countOk').textContent = stats.ok;
+            document.getElementById('countError').textContent = stats.error;
+            document.getElementById('countTimeout').textContent = stats.timeout;
+            document.getElementById('countUnknown').textContent = stats.unknown;
+            document.getElementById('countTotal').textContent = total;
+            document.getElementById('checkSummary').classList.remove('hidden');
+            document.getElementById('btnExportResults').classList.remove('hidden');
+
+            // 如果有问题链接，显示筛选按钮
+            if (stats.error > 0 || stats.timeout > 0) {
+                document.getElementById('btnShowProblems').classList.remove('hidden');
+            }
+
+            isChecking = false;
+
+            // 提示
+            const problemCount = stats.error + stats.timeout;
+            if (problemCount > 0) {
+                showToast(`检测完成：发现 ${problemCount} 个问题链接`, 'warning');
+            } else {
+                showToast('检测完成：所有链接正常', 'success');
+            }
+        }
+
+        // 从工具栏按钮触发（打开模态框）
+        function checkAllLinks() {
+            openLinkCheckModal();
+        }
+
+        // 筛选结果
+        function filterResults(type) {
+            const items = document.querySelectorAll('#checkResults > div');
+            items.forEach(item => {
+                const statusMatch = item.className.match(/bg-(green|red|yellow|cyan)-100/);
+                const status = statusMatch ? {
+                    'green': 'ok',
+                    'red': 'error',
+                    'yellow': 'timeout',
+                    'cyan': 'unknown'
+                }[statusMatch[1]] : null;
+
+                if (type === 'all') {
+                    item.style.display = '';
+                } else if (type === 'problems') {
+                    item.style.display = (status === 'error' || status === 'timeout') ? '' : 'none';
+                } else {
+                    item.style.display = (status === type) ? '' : 'none';
+                }
+            });
+        }
+
+        // 添加结果项到列表
+        function appendResultItem(result) {
+            const container = document.getElementById('checkResults');
+
+            const statusColors = {
+                ok: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
+                error: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300',
+                timeout: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300',
+                unknown: 'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300'
+            };
+
+            const statusIcons = {
+                ok: '✅',
+                error: '❌',
+                timeout: '⏱️',
+                unknown: '❓'
+            };
+
+            const iconWarning = result.iconStatus && result.iconStatus !== 'ok'
+                ? `<span class="ml-2 text-orange-500" title="${result.iconMessage}">⚠️ 图标</span>`
+                : '';
+
+            const html = `
+                <div class="flex items-center gap-3 p-3 rounded-lg ${statusColors[result.urlStatus]} border border-current/20">
+                    <span class="text-lg">${statusIcons[result.urlStatus]}</span>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-medium truncate max-w-[150px]">${result.name}</span>
+                            <span class="text-xs opacity-70 px-1.5 py-0.5 rounded bg-white/50 dark:bg-black/20">${result.category}</span>
+                            ${iconWarning}
+                        </div>
+                        <a href="${result.url}" target="_blank" class="text-xs opacity-70 truncate block hover:underline">${result.url}</a>
+                    </div>
+                    <span class="text-xs whitespace-nowrap font-medium">${result.urlMessage}</span>
+                </div>
+            `;
+
+            container.insertAdjacentHTML('beforeend', html);
+        }
+
+        // 导出检测报告
+        function exportCheckResults() {
+            if (checkResults.length === 0) {
+                showToast('没有可导出的结果', 'warning');
+                return;
+            }
+
+            const now = new Date().toLocaleString('zh-CN');
+            let report = `# 链接检测报告\n\n`;
+            report += `**检测时间**：${now}\n`;
+            report += `**总计**：${checkResults.length} 个链接\n\n`;
+
+            // 统计
+            const stats = {
+                ok: checkResults.filter(r => r.urlStatus === 'ok').length,
+                error: checkResults.filter(r => r.urlStatus === 'error').length,
+                timeout: checkResults.filter(r => r.urlStatus === 'timeout').length,
+                unknown: checkResults.filter(r => r.urlStatus === 'unknown').length
+            };
+            report += `## 📊 统计摘要\n\n`;
+            report += `| 状态 | 数量 |\n`;
+            report += `|------|------|\n`;
+            report += `| ✅ 正常 | ${stats.ok} |\n`;
+            report += `| ❌ 异常 | ${stats.error} |\n`;
+            report += `| ⏱️ 超时 | ${stats.timeout} |\n`;
+            report += `| ❓ 未知 | ${stats.unknown} |\n\n`;
+
+            // 问题链接
+            const problems = checkResults.filter(r => r.urlStatus !== 'ok' && r.urlStatus !== 'unknown');
+            if (problems.length > 0) {
+                report += `## ⚠️ 问题链接 (${problems.length})\n\n`;
+                problems.forEach(r => {
+                    const icon = r.urlStatus === 'error' ? '❌' : '⏱️';
+                    report += `### ${icon} ${r.name}\n`;
+                    report += `- **分类**: ${r.category}\n`;
+                    report += `- **链接**: ${r.url}\n`;
+                    report += `- **状态**: ${r.urlMessage}\n`;
+                    if (r.iconStatus && r.iconStatus !== 'ok') {
+                        report += `- **图标问题**: ${r.iconMessage}\n`;
+                    }
+                    report += `\n`;
+                });
+            }
+
+            // 完整列表
+            report += `## 📋 完整列表\n\n`;
+            report += `| 状态 | 名称 | 分类 | 链接 |\n`;
+            report += `|------|------|------|------|\n`;
+            checkResults.forEach(r => {
+                const icon = { ok: '✅', error: '❌', timeout: '⏱️', unknown: '❓' }[r.urlStatus];
+                report += `| ${icon} | ${r.name} | ${r.category} | ${r.url} |\n`;
+            });
+
+            // 下载文件
+            const blob = new Blob([report], { type: 'text/markdown;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `link-check-report-${new Date().toISOString().slice(0, 10)}.md`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            showToast('报告已下载');
+        }
+    </script>
+</body>
+
+</html>

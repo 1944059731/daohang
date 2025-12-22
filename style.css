@@ -1,0 +1,393 @@
+/* 自定义样式 - 补充 Tailwind CSS */
+
+/* 平滑滚动 */
+html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* 防止 iOS 双击缩放 */
+* {
+    touch-action: manipulation;
+}
+
+/* 卡片悬浮效果 */
+.site-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    will-change: transform;
+}
+
+.site-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px -12px rgba(0, 0, 0, 0.15);
+}
+
+/* 触摸设备优化 - 移除 hover 效果避免粘滞 */
+@media (hover: none) and (pointer: coarse) {
+    .site-card:hover {
+        transform: none;
+        box-shadow: none;
+    }
+
+    .site-card:active {
+        transform: scale(0.98);
+        opacity: 0.9;
+    }
+}
+
+/* 导航按钮激活状态 */
+.nav-btn.active {
+    background: linear-gradient(135deg, #8b5cf6, #6366f1);
+    color: white;
+    border-color: transparent;
+}
+
+/* 搜索框焦点效果 */
+#searchInput:focus {
+    box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15);
+}
+
+/* 背景动画 - 使用 GPU 加速 */
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0) rotate(0deg);
+    }
+
+    50% {
+        transform: translateY(-20px) rotate(5deg);
+    }
+}
+
+.fixed>div {
+    animation: float 20s ease-in-out infinite;
+    will-change: transform;
+}
+
+.fixed>div:nth-child(2) {
+    animation-delay: -7s;
+}
+
+.fixed>div:nth-child(3) {
+    animation-delay: -14s;
+}
+
+/* 减少动画运动偏好 */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+
+    html {
+        scroll-behavior: auto;
+    }
+
+    .fixed>div {
+        animation: none;
+    }
+}
+
+/* 卡片图标容器 - 固定尺寸避免 CLS */
+.icon-container {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    font-size: 20px;
+    flex-shrink: 0;
+    contain: layout style;
+}
+
+/* 图标图片固定尺寸 */
+.icon-container img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+}
+
+/* 友链样式 */
+.friend-link {
+    transition: all 0.3s ease;
+}
+
+.friend-link:hover {
+    transform: scale(1.05);
+    background-color: rgba(139, 92, 246, 0.1);
+}
+
+/* 无搜索结果提示 */
+.no-results {
+    text-align: center;
+    padding: 40px;
+    color: #64748b;
+}
+
+/* ===== 骨架屏样式 ===== */
+.skeleton {
+    background: linear-gradient(90deg,
+            rgba(200, 200, 200, 0.2) 25%,
+            rgba(200, 200, 200, 0.4) 50%,
+            rgba(200, 200, 200, 0.2) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+    border-radius: 8px;
+}
+
+.dark .skeleton {
+    background: linear-gradient(90deg,
+            rgba(100, 100, 100, 0.2) 25%,
+            rgba(100, 100, 100, 0.4) 50%,
+            rgba(100, 100, 100, 0.2) 75%);
+    background-size: 200% 100%;
+}
+
+@keyframes skeleton-loading {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+.skeleton-card {
+    height: 100px;
+    border-radius: 16px;
+}
+
+/* ===== 响应式调整 ===== */
+
+/* 平板端 */
+@media (max-width: 768px) {
+    .nav-btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.8rem;
+    }
+}
+
+/* 手机端 */
+@media (max-width: 640px) {
+    .nav-btn {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.75rem;
+    }
+
+    h1 {
+        font-size: 1.875rem !important;
+    }
+
+    /* 优化卡片内边距 */
+    .site-card {
+        padding: 0.875rem !important;
+    }
+
+    /* 搜索框优化 */
+    #searchInput {
+        padding-left: 2.75rem;
+        font-size: 16px;
+        /* 防止 iOS 自动缩放 */
+    }
+}
+
+/* 小屏手机端 */
+@media (max-width: 480px) {
+    h1 {
+        font-size: 1.5rem !important;
+    }
+
+    .nav-btn {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.7rem;
+    }
+
+    /* 图标容器缩小 */
+    .icon-container {
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+        min-height: 36px;
+        font-size: 18px;
+    }
+
+    .icon-container img {
+        width: 20px;
+        height: 20px;
+    }
+}
+
+/* 极小屏幕 */
+@media (max-width: 360px) {
+    h1 {
+        font-size: 1.25rem !important;
+    }
+
+    .nav-btn {
+        padding: 0.35rem 0.5rem;
+        font-size: 0.65rem;
+    }
+
+    header p {
+        font-size: 0.8rem;
+    }
+}
+
+/* ===== 安全区域适配 (iPhone X 等刘海屏) ===== */
+.safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+body {
+    padding-left: env(safe-area-inset-left, 0);
+    padding-right: env(safe-area-inset-right, 0);
+}
+
+footer {
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0));
+}
+
+/* ===== 暗色模式过渡 ===== */
+html {
+    transition: background-color 0.3s ease;
+}
+
+body,
+.site-card,
+.nav-btn,
+#searchInput,
+header,
+footer {
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+/* 暗色模式切换按钮 */
+#themeToggle {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+#themeToggle:hover {
+    transform: scale(1.1);
+}
+
+#themeToggle:active {
+    transform: scale(0.95);
+}
+
+/* ===== 滚动条美化 ===== */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(139, 92, 246, 0.3);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(139, 92, 246, 0.5);
+}
+
+/* Firefox 滚动条 */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(139, 92, 246, 0.3) transparent;
+}
+
+/* ===== 卡片内链接图标 ===== */
+.external-icon {
+    opacity: 0;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.site-card:hover .external-icon {
+    opacity: 1;
+    transform: translateX(2px);
+}
+
+/* 触摸设备始终显示外链图标 */
+@media (hover: none) {
+    .external-icon {
+        opacity: 0.5;
+    }
+}
+
+/* ===== 页面加载过渡 ===== */
+.page-loaded main {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ===== 自定义 Tooltip - 悬停卡片显示完整描述 ===== */
+.desc-tooltip {
+    position: relative;
+}
+
+/* 卡片悬停时提升层级 */
+.site-card.desc-tooltip:hover {
+    z-index: 50;
+}
+
+.desc-tooltip::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: 52px;
+    right: 16px;
+    top: 100%;
+    margin-top: 4px;
+    padding: 10px 14px;
+    background: rgba(30, 27, 75, 0.95);
+    color: #fff;
+    font-size: 13px;
+    line-height: 1.5;
+    border-radius: 10px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+    white-space: normal;
+    box-sizing: border-box;
+    z-index: 9999;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-5px);
+    transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+    pointer-events: none;
+}
+
+.desc-tooltip:hover::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+/* 暗色模式 tooltip */
+.dark .desc-tooltip::after {
+    background: rgba(255, 255, 255, 0.95);
+    color: #1e1b4b;
+}
+
+/* 触摸设备禁用 tooltip（避免遮挡） */
+@media (hover: none) and (pointer: coarse) {
+    .desc-tooltip::after {
+        display: none;
+    }
+}

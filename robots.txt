@@ -1,0 +1,5 @@
+User-agent: *
+Disallow:
+
+Sitemap: https://ap.716201.xyz/sitemap.xml
+Sitemap: https://ap.716201.xyz/llms.txt

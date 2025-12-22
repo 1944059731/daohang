@@ -1254,13 +1254,13 @@
                 const response = await fetch('script.js');
                 const text = await response.text();
 
-                const match = text.match(/const\s+siteData\s*=\s*(\{[\s\S]*?\n\};)/);
+                const match = text.match(/const\s+(defaultSiteData|siteData)\s*=\s*(\{[\s\S]*?\n\};)/);
                 if (!match) {
                     showToast('无法解析 script.js 中的数据', 'error');
                     return;
                 }
 
-                const extractedData = new Function('return ' + match[1].slice(0, -1))();
+                const extractedData = new Function('return ' + match[2].slice(0, -1))();
 
                 siteData = {
                     common: extractedData.common || [],

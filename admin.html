@@ -285,8 +285,8 @@
         <div class="absolute -bottom-40 right-1/3 w-80 h-80 bg-teal-300/30 rounded-full blur-3xl"></div>
     </div>
 
-    <!-- 登录模态框 -->
-    <div id="loginModal" class="modal-backdrop fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <!-- 登录模态框 - 默认隐藏防止闪烁 -->
+    <div id="loginModal" class="modal-backdrop fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
         <div class="modal-content bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-sm w-full mx-4">
             <h3 class="text-xl font-semibold mb-4 text-slate-800 dark:text-white text-center">🔐 管理员登录</h3>
             <form id="loginForm" class="space-y-4">
@@ -295,11 +295,28 @@
                     <input type="password" id="loginPassword" required placeholder="请输入密码"
                         class="w-full px-4 py-3 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white focus:border-purple-500 focus:outline-none text-center text-lg">
                 </div>
-                <button type="submit"
-                    class="w-full px-4 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-medium transition-colors">
+                <div>
+                    <label class="block text-sm text-slate-600 dark:text-slate-300 mb-1">验证码</label>
+                    <div class="flex gap-3 items-center">
+                        <div id="captchaQuestion"
+                            class="flex-shrink-0 px-4 py-2 bg-gradient-to-r from-purple-100 to-blue-100 dark:from-purple-900/30 dark:to-blue-900/30 rounded-lg text-slate-800 dark:text-white font-mono text-lg font-bold select-none">
+                            <!-- 验证码将由JS生成 -->
+                        </div>
+                        <span class="text-slate-500">=</span>
+                        <input type="text" id="captchaAnswer" required placeholder="?" autocomplete="off"
+                            class="flex-1 px-4 py-2 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white focus:border-purple-500 focus:outline-none text-center text-lg font-mono w-20">
+                        <button type="button" onclick="refreshCaptcha()"
+                            class="p-2 text-slate-500 hover:text-purple-500 transition-colors" title="刷新验证码">
+                            🔄
+                        </button>
+                    </div>
+                </div>
+                <button type="submit" id="loginBtn"
+                    class="w-full px-4 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                     登录管理后台
                 </button>
-                <p id="loginError" class="text-red-500 text-center text-sm hidden">密码错误，请重试</p>
+                <p id="loginError" class="text-red-500 text-center text-sm hidden"></p>
+                <p id="loginLockout" class="text-orange-500 text-center text-sm hidden"></p>
             </form>
             <p class="text-center text-slate-500 text-xs mt-4">仅限管理员访问</p>
         </div>
@@ -627,10 +644,22 @@
         // ==================== 配置和状态 ====================
         const STORAGE_KEY = 'navsite_data';
         const API_BASE = '/api';
+        const MAX_LOGIN_ATTEMPTS = 5;  // 最大登录尝试次数
+        const LOCKOUT_DURATION = 5 * 60 * 1000;  // 锁定时长 5 分钟
 
         // 认证状态
         let authToken = localStorage.getItem('admin_token') || null;
         let isLoggedIn = false;
+
+        // 验证码状态
+        let captchaNum1 = 0;
+        let captchaNum2 = 0;
+        let captchaOperator = '+';
+        let captchaResult = 0;
+
+        // 登录尝试限制
+        let loginAttempts = parseInt(localStorage.getItem('login_attempts') || '0');
+        let lockoutUntil = parseInt(localStorage.getItem('lockout_until') || '0');
 
         const categoryNames = {
             common: '常用工具',
@@ -690,29 +719,132 @@
         }
 
         function showLoginModal() {
+            generateCaptcha();  // 显示登录框时生成验证码
             document.getElementById('loginModal').classList.remove('hidden');
+            document.getElementById('loginPassword').focus();
         }
 
         function hideLoginModal() {
             document.getElementById('loginModal').classList.add('hidden');
         }
 
+        // ==================== 验证码功能 ====================
+
+        function generateCaptcha() {
+            const operators = ['+', '-', '×'];
+            captchaOperator = operators[Math.floor(Math.random() * operators.length)];
+
+            if (captchaOperator === '+') {
+                captchaNum1 = Math.floor(Math.random() * 20) + 1;
+                captchaNum2 = Math.floor(Math.random() * 20) + 1;
+                captchaResult = captchaNum1 + captchaNum2;
+            } else if (captchaOperator === '-') {
+                captchaNum1 = Math.floor(Math.random() * 20) + 10;
+                captchaNum2 = Math.floor(Math.random() * captchaNum1);
+                captchaResult = captchaNum1 - captchaNum2;
+            } else {
+                captchaNum1 = Math.floor(Math.random() * 9) + 1;
+                captchaNum2 = Math.floor(Math.random() * 9) + 1;
+                captchaResult = captchaNum1 * captchaNum2;
+            }
+
+            const captchaEl = document.getElementById('captchaQuestion');
+            if (captchaEl) {
+                captchaEl.textContent = `${captchaNum1} ${captchaOperator} ${captchaNum2}`;
+            }
+        }
+
+        function refreshCaptcha() {
+            generateCaptcha();
+            document.getElementById('captchaAnswer').value = '';
+            document.getElementById('captchaAnswer').focus();
+        }
+
+        function verifyCaptcha() {
+            const answer = parseInt(document.getElementById('captchaAnswer').value, 10);
+            return answer === captchaResult;
+        }
+
+        function checkLockout() {
+            if (Date.now() < lockoutUntil) {
+                const remainingSeconds = Math.ceil((lockoutUntil - Date.now()) / 1000);
+                const minutes = Math.floor(remainingSeconds / 60);
+                const seconds = remainingSeconds % 60;
+                return `账户已锁定，请 ${minutes}:${seconds.toString().padStart(2, '0')} 后重试`;
+            }
+            // 锁定时间已过，重置尝试次数
+            if (lockoutUntil > 0 && Date.now() >= lockoutUntil) {
+                loginAttempts = 0;
+                lockoutUntil = 0;
+                localStorage.setItem('login_attempts', '0');
+                localStorage.setItem('lockout_until', '0');
+            }
+            return null;
+        }
+
+        function recordFailedAttempt() {
+            loginAttempts++;
+            localStorage.setItem('login_attempts', loginAttempts.toString());
+
+            if (loginAttempts >= MAX_LOGIN_ATTEMPTS) {
+                lockoutUntil = Date.now() + LOCKOUT_DURATION;
+                localStorage.setItem('lockout_until', lockoutUntil.toString());
+                return `尝试次数过多，账户已锁定 5 分钟`;
+            }
+
+            return `密码或验证码错误，还剩 ${MAX_LOGIN_ATTEMPTS - loginAttempts} 次尝试机会`;
+        }
+
+        function resetLoginAttempts() {
+            loginAttempts = 0;
+            lockoutUntil = 0;
+            localStorage.setItem('login_attempts', '0');
+            localStorage.setItem('lockout_until', '0');
+        }
+
         // 登录表单处理
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('loginForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const password = document.getElementById('loginPassword').value;
-                const errorEl = document.getElementById('loginError');
 
+                const errorEl = document.getElementById('loginError');
+                const lockoutEl = document.getElementById('loginLockout');
+
+                // 检查是否被锁定
+                const lockoutMsg = checkLockout();
+                if (lockoutMsg) {
+                    lockoutEl.textContent = lockoutMsg;
+                    lockoutEl.classList.remove('hidden');
+                    errorEl.classList.add('hidden');
+                    return;
+                }
+
+                // 验证验证码
+                if (!verifyCaptcha()) {
+                    const errMsg = recordFailedAttempt();
+                    errorEl.textContent = errMsg;
+                    errorEl.classList.remove('hidden');
+                    lockoutEl.classList.add('hidden');
+                    refreshCaptcha();
+                    return;
+                }
+
+                const password = document.getElementById('loginPassword').value;
                 const success = await login(password);
+
                 if (success) {
+                    resetLoginAttempts();
                     hideLoginModal();
                     errorEl.classList.add('hidden');
+                    lockoutEl.classList.add('hidden');
                     await loadFromAPI();
                     renderAll();
                     updateSyncStatus('connected');
                 } else {
+                    const errMsg = recordFailedAttempt();
+                    errorEl.textContent = errMsg;
                     errorEl.classList.remove('hidden');
+                    refreshCaptcha();
                 }
             });
         });

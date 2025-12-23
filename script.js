@@ -359,6 +359,11 @@ function initThemeToggle() {
 function initNavigation() {
     const navButtons = document.querySelectorAll('.nav-btn');
 
+    // 页面加载时默认激活第一个导航按钮（常用工具）
+    if (navButtons.length > 0) {
+        navButtons[0].classList.add('active');
+    }
+
     navButtons.forEach(btn => {
         btn.addEventListener('click', (e) => {
             // 移除所有激活状态

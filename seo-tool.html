@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#1e1b4b">
+    <meta name="robots" content="noindex, nofollow">
+    <title>SEO 诊断大师 | 在线 SEO 分析工具</title>
+    <meta name="description" content="免费在线SEO分析工具，一键检测网站SEO问题，包括标题、描述、H1标签、Open Graph、内链等12项关键指标。">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 深色科技风格 */
+        body {
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0a0a1a 100%);
+            min-height: 100vh;
+        }
+
+        /* 渐变背景装饰 */
+        .bg-glow {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .bg-glow-1 {
+            width: 600px;
+            height: 600px;
+            background: #8b5cf6;
+            top: -200px;
+            right: -100px;
+        }
+
+        .bg-glow-2 {
+            width: 500px;
+            height: 500px;
+            background: #3b82f6;
+            bottom: -150px;
+            left: -100px;
+        }
+
+        /* 卡片样式 */
+        .card {
+            background: rgba(30, 27, 75, 0.6);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .card:hover {
+            border-color: rgba(139, 92, 246, 0.4);
+        }
+
+        /* 输入框样式 */
+        .input-glow:focus {
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3);
+        }
+
+        /* 按钮动画 */
+        .btn-primary {
+            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        /* 评分圆环 */
+        .score-ring {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: conic-gradient(#22c55e var(--score-percent, 0%),
+                    rgba(255, 255, 255, 0.1) var(--score-percent, 0%));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .score-ring-inner {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: #1e1b4b;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 状态标签 */
+        .status-pass {
+            color: #22c55e;
+            background: rgba(34, 197, 94, 0.1);
+        }
+
+        .status-fail {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .status-warn {
+            color: #f59e0b;
+            background: rgba(245, 158, 11, 0.1);
+        }
+
+        /* 加载动画 */
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(139, 92, 246, 0.3);
+            border-top-color: #8b5cf6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* 结果项动画 */
+        .result-item {
+            animation: fadeInUp 0.3s ease forwards;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 代码块样式 */
+        .code-block {
+            background: #0a0a1a;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            font-family: 'Fira Code', 'Consolas', monospace;
+            font-size: 13px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+
+<body class="text-white">
+    <!-- 背景装饰 -->
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+
+    <div class="relative z-10 container mx-auto px-4 py-8" style="max-width: 1000px;">
+        <!-- 头部 -->
+        <header class="text-center mb-10">
+            <div class="flex items-center justify-between mb-6">
+                <a href="index.html" class="text-purple-400 hover:text-purple-300 transition-colors">
+                    ← 返回导航站
+                </a>
+                <span class="text-slate-500 text-sm">v1.0</span>
+            </div>
+            <h1
+                class="text-4xl md:text-5xl font-bold mb-3 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+                🔍 SEO 诊断大师
+            </h1>
+            <p class="text-slate-400 max-w-xl mx-auto">
+                输入任意网址，一键获取全面的 SEO 诊断报告，包含 12 项关键指标分析和优化建议
+            </p>
+        </header>
+
+        <!-- 输入区域 -->
+        <section class="card rounded-2xl p-6 mb-6">
+            <div class="flex flex-col md:flex-row gap-4">
+                <div class="flex-1">
+                    <label class="block text-sm text-slate-400 mb-2">目标网址 *</label>
+                    <input type="url" id="urlInput" placeholder="https://example.com" required
+                        class="input-glow w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 transition-colors">
+                </div>
+                <div class="md:w-64">
+                    <label class="block text-sm text-slate-400 mb-2">关键词 (可选)</label>
+                    <input type="text" id="keywordInput" placeholder="SEO, 优化, 工具..."
+                        class="input-glow w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 transition-colors">
+                </div>
+            </div>
+            <div class="mt-4 flex flex-col sm:flex-row gap-3">
+                <button onclick="runAudit()" id="auditBtn"
+                    class="btn-primary flex-1 px-6 py-3 rounded-xl font-semibold text-white flex items-center justify-center gap-2">
+                    <span id="btnIcon">🚀</span>
+                    <span id="btnText">开始分析</span>
+                </button>
+                <button onclick="clearResults()"
+                    class="px-6 py-3 bg-slate-800 hover:bg-slate-700 rounded-xl font-medium text-slate-300 transition-colors">
+                    🗑️ 清除结果
+                </button>
+            </div>
+        </section>
+
+        <!-- 加载状态 -->
+        <div id="loadingState" class="hidden card rounded-2xl p-10 mb-6 text-center">
+            <div class="loading-spinner mx-auto mb-4"></div>
+            <p class="text-slate-400">正在分析网页，请稍候...</p>
+            <p class="text-slate-500 text-sm mt-2" id="loadingTip">正在获取页面内容</p>
+        </div>
+
+        <!-- 结果区域 -->
+        <div id="resultArea" class="hidden">
+            <!-- 综合评分 -->
+            <section class="card rounded-2xl p-6 mb-6">
+                <div class="flex flex-col md:flex-row items-center gap-6">
+                    <div class="score-ring" id="scoreRing">
+                        <div class="score-ring-inner">
+                            <span class="text-4xl font-bold" id="scoreValue">0</span>
+                            <span class="text-slate-400 text-sm">/ 100</span>
+                        </div>
+                    </div>
+                    <div class="flex-1 text-center md:text-left">
+                        <h2 class="text-2xl font-bold mb-2" id="scoreLabel">正在计算...</h2>
+                        <p class="text-slate-400" id="scoreDesc">正在分析您的网页 SEO 状况</p>
+                        <div class="flex flex-wrap gap-2 mt-4 justify-center md:justify-start" id="quickStats">
+                            <!-- 快速统计将动态插入 -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 检测项目 -->
+            <section class="card rounded-2xl p-6 mb-6">
+                <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    📋 详细检测报告
+                </h3>
+                <div id="resultList" class="space-y-3">
+                    <!-- 结果项将动态插入 -->
+                </div>
+            </section>
+
+            <!-- 优化建议代码 -->
+            <section id="suggestionSection" class="card rounded-2xl p-6 mb-6 hidden">
+                <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    💡 优化建议代码
+                </h3>
+                <p class="text-slate-400 text-sm mb-4">以下是根据检测结果生成的优化代码，可直接复制到网页 &lt;head&gt; 中：</p>
+                <div class="code-block rounded-xl p-4 mb-4">
+                    <pre id="suggestionCode" class="text-green-400 whitespace-pre-wrap"></pre>
+                </div>
+                <button onclick="copyCode()"
+                    class="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg text-sm font-medium transition-colors">
+                    📋 复制代码
+                </button>
+            </section>
+        </div>
+
+        <!-- 使用说明 -->
+        <section class="card rounded-2xl p-6 mb-6">
+            <h3 class="text-lg font-bold mb-3">📖 使用说明</h3>
+            <div class="grid md:grid-cols-2 gap-4 text-sm text-slate-400">
+                <div>
+                    <h4 class="text-white font-medium mb-2">检测项目</h4>
+                    <ul class="space-y-1">
+                        <li>✓ 标题 (Title) 长度检测</li>
+                        <li>✓ 元描述 (Meta Description)</li>
+                        <li>✓ H1 标签检测</li>
+                        <li>✓ Canonical 链接</li>
+                        <li>✓ Open Graph 社交标签</li>
+                        <li>✓ 内容字数统计</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-medium mb-2">高级分析</h4>
+                    <ul class="space-y-1">
+                        <li>✓ 内链检测</li>
+                        <li>✓ 图片检测</li>
+                        <li>✓ 关键词在标题中出现</li>
+                        <li>✓ 关键词在 H1 中出现</li>
+                        <li>✓ 关键词在描述中出现</li>
+                        <li>✓ 关键词密度分析</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- 底部 -->
+        <footer class="text-center text-slate-500 text-sm py-6">
+            <p>基于 <a href="https://github.com/ngerank/seo-audit-tool" target="_blank"
+                    class="text-purple-400 hover:text-purple-300">ngerank/seo-audit-tool</a> 开源项目</p>
+            <p class="mt-1">支持多 CORS 代理自动切换（AllOrigins / CorsProxy.io / CorsAnywhere）</p>
+        </footer>
+    </div>
+
+    <script>
+        // SEO 分析工具核心逻辑
+
+        // 多个 CORS 代理源（按优先级排序，自动故障转移）
+        const CORS_PROXIES = [
+            {
+                name: 'AllOrigins',
+                url: 'https://api.allorigins.win/get?url=',
+                parseResponse: async (response) => {
+                    const data = await response.json();
+                    return data.contents;
+                }
+            },
+            {
+                name: 'CorsProxy.io',
+                url: 'https://corsproxy.io/?',
+                parseResponse: async (response) => {
+                    return await response.text();
+                }
+            },
+            {
+                name: 'CorsAnywhere (备用)',
+                url: 'https://cors-anywhere.herokuapp.com/',
+                parseResponse: async (response) => {
+                    return await response.text();
+                }
+            }
+        ];
+
+        let currentProxyIndex = 0;
+
+        // 通过代理获取页面内容（带自动故障转移）
+        async function fetchWithProxy(url, proxyIndex = 0) {
+            if (proxyIndex >= CORS_PROXIES.length) {
+                throw new Error('所有代理均不可用');
+            }
+
+            const proxy = CORS_PROXIES[proxyIndex];
+            updateLoadingTip(`正在通过 ${proxy.name} 获取页面... (${proxyIndex + 1}/${CORS_PROXIES.length})`);
+
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 20000); // 20秒超时（增加了时间）
+
+                console.log(`尝试代理 ${proxy.name}: ${proxy.url}${url.substring(0, 50)}...`);
+
+                const response = await fetch(proxy.url + encodeURIComponent(url), {
+                    signal: controller.signal,
+                    headers: {
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+                    }
+                });
+
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const html = await proxy.parseResponse(response);
+
+                if (!html) {
+                    throw new Error('返回内容为空');
+                }
+
+                // 检查是否是有效的 HTML
+                if (html.length < 50 || (!html.includes('<') && !html.includes('html'))) {
+                    throw new Error('返回内容不是有效的 HTML');
+                }
+
+                currentProxyIndex = proxyIndex; // 记住成功的代理
+                console.log(`✓ ${proxy.name} 成功获取 ${html.length} 字符`);
+                return html;
+
+            } catch (error) {
+                const errorType = error.name === 'AbortError' ? '超时' : error.message;
+                console.warn(`✗ ${proxy.name} 失败: ${errorType}`);
+
+                // 尝试下一个代理
+                if (proxyIndex < CORS_PROXIES.length - 1) {
+                    updateLoadingTip(`${proxy.name} ${errorType}，正在切换备用代理...`);
+                    await new Promise(r => setTimeout(r, 300)); // 短暂延迟
+                    return fetchWithProxy(url, proxyIndex + 1);
+                }
+
+                // 所有代理都失败了
+                throw new Error(`所有代理均失败 (最后错误: ${errorType})`);
+            }
+        }
+
+        // 运行 SEO 分析
+        async function runAudit() {
+            let url = document.getElementById('urlInput').value.trim();
+            const keyword = document.getElementById('keywordInput').value.trim().toLowerCase();
+
+            if (!url) {
+                showToast('请输入网址', 'error');
+                return;
+            }
+
+            // 自动添加协议
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                url = 'https://' + url;
+                document.getElementById('urlInput').value = url;
+            }
+
+            // 验证 URL 格式
+            let parsedUrl;
+            try {
+                parsedUrl = new URL(url);
+            } catch {
+                showToast('请输入有效的网址', 'error');
+                return;
+            }
+
+            // 规范化 URL（确保格式正确）
+            const normalizedUrl = parsedUrl.href;
+
+            // 显示加载状态
+            setLoading(true);
+
+            try {
+                // 通过 CORS 代理获取页面内容（带自动故障转移）
+                const html = await fetchWithProxy(normalizedUrl, 0); // 总是从第一个代理开始
+
+                updateLoadingTip('正在解析 HTML...');
+
+                // 解析 HTML
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+
+                updateLoadingTip('正在分析 SEO 指标...');
+
+                // 执行各项检测
+                const results = await analyzeDocument(doc, normalizedUrl, keyword, html);
+
+                // 显示结果
+                displayResults(results);
+
+            } catch (error) {
+                console.error('分析失败:', error);
+
+                // 提供更友好的错误提示
+                let errorMessage = error.message;
+                if (error.name === 'AbortError' || errorMessage.includes('abort')) {
+                    errorMessage = '请求超时，目标网站响应较慢或无法访问';
+                } else if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
+                    errorMessage = '网络连接失败，请检查网络或稍后重试';
+                } else if (errorMessage.includes('所有代理')) {
+                    errorMessage = '所有代理均超时，目标网站可能无法通过代理访问';
+                }
+
+                showToast('分析失败: ' + errorMessage, 'error');
+                setLoading(false);
+            }
+        }
+
+        // 分析文档
+        async function analyzeDocument(doc, url, keyword, html) {
+            const results = [];
+            let passCount = 0;
+            let totalChecks = 0;
+
+            // 1. 标题检测
+            const title = doc.querySelector('title')?.textContent?.trim() || '';
+            const titleLength = title.length;
+            totalChecks++;
+            if (title && titleLength >= 30 && titleLength <= 60) {
+                passCount++;
+                results.push({
+                    name: '页面标题',
+                    status: 'pass',
+                    message: `标题长度 ${titleLength} 字符（推荐 30-60）`,
+                    detail: title,
+                    icon: '📝'
+                });
+            } else if (title) {
+                results.push({
+                    name: '页面标题',
+                    status: titleLength < 30 ? 'warn' : 'fail',
+                    message: `标题长度 ${titleLength} 字符（推荐 30-60）`,
+                    detail: title,
+                    icon: '📝'
+                });
+            } else {
+                results.push({
+                    name: '页面标题',
+                    status: 'fail',
+                    message: '缺少页面标题',
+                    icon: '📝'
+                });
+            }
+
+            // 2. Meta Description 检测
+            const metaDesc = doc.querySelector('meta[name="description"]')?.getAttribute('content')?.trim() || '';
+            totalChecks++;
+            if (metaDesc && metaDesc.length >= 50 && metaDesc.length <= 160) {
+                passCount++;
+                results.push({
+                    name: '元描述',
+                    status: 'pass',
+                    message: `描述长度 ${metaDesc.length} 字符（推荐 50-160）`,
+                    detail: metaDesc,
+                    icon: '📄'
+                });
+            } else if (metaDesc) {
+                results.push({
+                    name: '元描述',
+                    status: 'warn',
+                    message: `描述长度 ${metaDesc.length} 字符（推荐 50-160）`,
+                    detail: metaDesc,
+                    icon: '📄'
+                });
+            } else {
+                results.push({
+                    name: '元描述',
+                    status: 'fail',
+                    message: '缺少 meta description',
+                    icon: '📄'
+                });
+            }
+
+            // 3. H1 标签检测
+            const h1Tags = doc.querySelectorAll('h1');
+            totalChecks++;
+            if (h1Tags.length === 1) {
+                passCount++;
+                results.push({
+                    name: 'H1 标签',
+                    status: 'pass',
+                    message: '存在唯一的 H1 标签',
+                    detail: h1Tags[0].textContent.trim().substring(0, 100),
+                    icon: '🏷️'
+                });
+            } else if (h1Tags.length > 1) {
+                results.push({
+                    name: 'H1 标签',
+                    status: 'warn',
+                    message: `存在 ${h1Tags.length} 个 H1 标签（建议只保留 1 个）`,
+                    icon: '🏷️'
+                });
+            } else {
+                results.push({
+                    name: 'H1 标签',
+                    status: 'fail',
+                    message: '缺少 H1 标签',
+                    icon: '🏷️'
+                });
+            }
+
+            // 4. Canonical 链接检测
+            const canonical = doc.querySelector('link[rel="canonical"]')?.getAttribute('href') || '';
+            totalChecks++;
+            if (canonical) {
+                passCount++;
+                results.push({
+                    name: 'Canonical 链接',
+                    status: 'pass',
+                    message: '存在规范链接',
+                    detail: canonical,
+                    icon: '🔗'
+                });
+            } else {
+                results.push({
+                    name: 'Canonical 链接',
+                    status: 'warn',
+                    message: '缺少 canonical 链接',
+                    icon: '🔗'
+                });
+            }
+
+            // 5. Open Graph 检测
+            const ogTitle = doc.querySelector('meta[property="og:title"]')?.getAttribute('content') || '';
+            const ogDesc = doc.querySelector('meta[property="og:description"]')?.getAttribute('content') || '';
+            const ogImage = doc.querySelector('meta[property="og:image"]')?.getAttribute('content') || '';
+            totalChecks++;
+            const ogCount = [ogTitle, ogDesc, ogImage].filter(Boolean).length;
+            if (ogCount >= 3) {
+                passCount++;
+                results.push({
+                    name: 'Open Graph',
+                    status: 'pass',
+                    message: '社交分享标签完整',
+                    detail: `og:title, og:description, og:image 均已设置`,
+                    icon: '📱'
+                });
+            } else if (ogCount > 0) {
+                results.push({
+                    name: 'Open Graph',
+                    status: 'warn',
+                    message: `社交分享标签不完整（${ogCount}/3）`,
+                    icon: '📱'
+                });
+            } else {
+                results.push({
+                    name: 'Open Graph',
+                    status: 'fail',
+                    message: '缺少 Open Graph 社交标签',
+                    icon: '📱'
+                });
+            }
+
+            // 6. 内容字数统计
+            const bodyText = doc.body?.textContent || '';
+            const wordCount = bodyText.trim().split(/\s+/).filter(w => w.length > 0).length;
+            const charCount = bodyText.replace(/\s/g, '').length;
+            totalChecks++;
+            if (charCount >= 300) {
+                passCount++;
+                results.push({
+                    name: '内容长度',
+                    status: 'pass',
+                    message: `页面包含约 ${charCount} 个字符`,
+                    icon: '📊'
+                });
+            } else {
+                results.push({
+                    name: '内容长度',
+                    status: 'warn',
+                    message: `内容较少，仅 ${charCount} 个字符（建议 300+）`,
+                    icon: '📊'
+                });
+            }
+
+            // 7. 内链检测
+            const internalLinks = doc.querySelectorAll('a[href^="/"], a[href^="./"], a[href^="../"]');
+            const domainLinks = doc.querySelectorAll(`a[href*="${new URL(url).hostname}"]`);
+            const totalInternalLinks = internalLinks.length + domainLinks.length;
+            totalChecks++;
+            if (totalInternalLinks >= 3) {
+                passCount++;
+                results.push({
+                    name: '内部链接',
+                    status: 'pass',
+                    message: `存在 ${totalInternalLinks} 个内部链接`,
+                    icon: '🔄'
+                });
+            } else if (totalInternalLinks > 0) {
+                results.push({
+                    name: '内部链接',
+                    status: 'warn',
+                    message: `仅 ${totalInternalLinks} 个内部链接（建议增加）`,
+                    icon: '🔄'
+                });
+            } else {
+                results.push({
+                    name: '内部链接',
+                    status: 'fail',
+                    message: '未检测到内部链接',
+                    icon: '🔄'
+                });
+            }
+
+            // 8. 图片检测
+            const images = doc.querySelectorAll('img');
+            const imagesWithAlt = doc.querySelectorAll('img[alt]:not([alt=""])');
+            totalChecks++;
+            if (images.length > 0 && imagesWithAlt.length === images.length) {
+                passCount++;
+                results.push({
+                    name: '图片优化',
+                    status: 'pass',
+                    message: `${images.length} 张图片全部有 alt 属性`,
+                    icon: '🖼️'
+                });
+            } else if (images.length > 0) {
+                const missingAlt = images.length - imagesWithAlt.length;
+                results.push({
+                    name: '图片优化',
+                    status: 'warn',
+                    message: `${missingAlt}/${images.length} 张图片缺少 alt 属性`,
+                    icon: '🖼️'
+                });
+            } else {
+                results.push({
+                    name: '图片优化',
+                    status: 'warn',
+                    message: '页面没有图片',
+                    icon: '🖼️'
+                });
+            }
+
+            // 关键词分析（如果提供了关键词）
+            if (keyword) {
+                const keywordLower = keyword.toLowerCase();
+
+                // 9. 关键词在标题中
+                totalChecks++;
+                if (title.toLowerCase().includes(keywordLower)) {
+                    passCount++;
+                    results.push({
+                        name: '关键词 - 标题',
+                        status: 'pass',
+                        message: `关键词 "${keyword}" 出现在标题中`,
+                        icon: '🎯'
+                    });
+                } else {
+                    results.push({
+                        name: '关键词 - 标题',
+                        status: 'fail',
+                        message: `关键词 "${keyword}" 未出现在标题中`,
+                        icon: '🎯'
+                    });
+                }
+
+                // 10. 关键词在 H1 中
+                const h1Text = h1Tags.length > 0 ? h1Tags[0].textContent.toLowerCase() : '';
+                totalChecks++;
+                if (h1Text.includes(keywordLower)) {
+                    passCount++;
+                    results.push({
+                        name: '关键词 - H1',
+                        status: 'pass',
+                        message: `关键词出现在 H1 标签中`,
+                        icon: '🎯'
+                    });
+                } else {
+                    results.push({
+                        name: '关键词 - H1',
+                        status: 'fail',
+                        message: `关键词未出现在 H1 标签中`,
+                        icon: '🎯'
+                    });
+                }
+
+                // 11. 关键词在描述中
+                totalChecks++;
+                if (metaDesc.toLowerCase().includes(keywordLower)) {
+                    passCount++;
+                    results.push({
+                        name: '关键词 - 描述',
+                        status: 'pass',
+                        message: `关键词出现在元描述中`,
+                        icon: '🎯'
+                    });
+                } else {
+                    results.push({
+                        name: '关键词 - 描述',
+                        status: 'fail',
+                        message: `关键词未出现在元描述中`,
+                        icon: '🎯'
+                    });
+                }
+
+                // 12. 关键词密度
+                const contentLower = bodyText.toLowerCase();
+                const keywordCount = (contentLower.match(new RegExp(keywordLower, 'g')) || []).length;
+                const density = charCount > 0 ? ((keywordCount * keyword.length) / charCount * 100).toFixed(2) : 0;
+                totalChecks++;
+                if (density >= 0.5 && density <= 3) {
+                    passCount++;
+                    results.push({
+                        name: '关键词密度',
+                        status: 'pass',
+                        message: `密度 ${density}%（出现 ${keywordCount} 次，推荐 0.5%-3%）`,
+                        icon: '📈'
+                    });
+                } else if (keywordCount > 0) {
+                    results.push({
+                        name: '关键词密度',
+                        status: 'warn',
+                        message: `密度 ${density}%（出现 ${keywordCount} 次，推荐 0.5%-3%）`,
+                        icon: '📈'
+                    });
+                } else {
+                    results.push({
+                        name: '关键词密度',
+                        status: 'fail',
+                        message: `关键词未在内容中出现`,
+                        icon: '📈'
+                    });
+                }
+            }
+
+            // 计算得分
+            const score = totalChecks > 0 ? Math.round((passCount / totalChecks) * 100) : 0;
+
+            return {
+                score,
+                passCount,
+                totalChecks,
+                results,
+                url,
+                title,
+                metaDesc,
+                ogTitle,
+                ogDesc,
+                ogImage
+            };
+        }
+
+        // 显示结果
+        function displayResults(data) {
+            setLoading(false);
+            document.getElementById('resultArea').classList.remove('hidden');
+
+            // 更新评分
+            const scoreRing = document.getElementById('scoreRing');
+            const scoreValue = document.getElementById('scoreValue');
+            const scoreLabel = document.getElementById('scoreLabel');
+            const scoreDesc = document.getElementById('scoreDesc');
+
+            scoreRing.style.setProperty('--score-percent', data.score + '%');
+            scoreValue.textContent = data.score;
+
+            // 设置评分颜色
+            if (data.score >= 80) {
+                scoreRing.style.background = `conic-gradient(#22c55e ${data.score}%, rgba(255,255,255,0.1) ${data.score}%)`;
+                scoreLabel.textContent = '优秀 🎉';
+                scoreLabel.className = 'text-2xl font-bold mb-2 text-green-400';
+            } else if (data.score >= 60) {
+                scoreRing.style.background = `conic-gradient(#f59e0b ${data.score}%, rgba(255,255,255,0.1) ${data.score}%)`;
+                scoreLabel.textContent = '良好 👍';
+                scoreLabel.className = 'text-2xl font-bold mb-2 text-yellow-400';
+            } else {
+                scoreRing.style.background = `conic-gradient(#ef4444 ${data.score}%, rgba(255,255,255,0.1) ${data.score}%)`;
+                scoreLabel.textContent = '需要优化 ⚠️';
+                scoreLabel.className = 'text-2xl font-bold mb-2 text-red-400';
+            }
+
+            scoreDesc.textContent = `共检测 ${data.totalChecks} 项，通过 ${data.passCount} 项`;
+
+            // 快速统计
+            const passItems = data.results.filter(r => r.status === 'pass').length;
+            const warnItems = data.results.filter(r => r.status === 'warn').length;
+            const failItems = data.results.filter(r => r.status === 'fail').length;
+
+            document.getElementById('quickStats').innerHTML = `
+                <span class="status-pass px-3 py-1 rounded-full text-sm">✓ 通过 ${passItems}</span>
+                <span class="status-warn px-3 py-1 rounded-full text-sm">⚠ 警告 ${warnItems}</span>
+                <span class="status-fail px-3 py-1 rounded-full text-sm">✗ 错误 ${failItems}</span>
+            `;
+
+            // 显示详细结果
+            const resultList = document.getElementById('resultList');
+            resultList.innerHTML = data.results.map((item, index) => `
+                <div class="result-item flex items-start gap-4 p-4 rounded-xl ${item.status === 'pass' ? 'bg-green-500/10 border border-green-500/20' :
+                    item.status === 'warn' ? 'bg-yellow-500/10 border border-yellow-500/20' :
+                        'bg-red-500/10 border border-red-500/20'
+                }" style="animation-delay: ${index * 50}ms">
+                    <span class="text-2xl">${item.icon}</span>
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <h4 class="font-semibold text-white">${item.name}</h4>
+                            <span class="${item.status === 'pass' ? 'status-pass' :
+                    item.status === 'warn' ? 'status-warn' :
+                        'status-fail'
+                } px-2 py-0.5 rounded text-xs font-medium">
+                                ${item.status === 'pass' ? '✓ 通过' : item.status === 'warn' ? '⚠ 警告' : '✗ 错误'}
+                            </span>
+                        </div>
+                        <p class="text-slate-400 text-sm">${item.message}</p>
+                        ${item.detail ? `<p class="text-slate-500 text-xs mt-1 truncate">${item.detail}</p>` : ''}
+                    </div>
+                </div>
+            `).join('');
+
+            // 生成优化建议代码
+            generateSuggestions(data);
+        }
+
+        // 生成优化建议代码
+        function generateSuggestions(data) {
+            let suggestions = [];
+
+            if (!data.title || data.title.length < 30) {
+                suggestions.push(`<title>您的页面标题 - 品牌名称</title>`);
+            }
+
+            if (!data.metaDesc) {
+                suggestions.push(`<meta name="description" content="在这里填写 50-160 字符的页面描述，包含核心关键词。">`);
+            }
+
+            if (!data.ogTitle) {
+                suggestions.push(`<meta property="og:title" content="${data.title || '页面标题'}">`);
+            }
+
+            if (!data.ogDesc) {
+                suggestions.push(`<meta property="og:description" content="${data.metaDesc || '页面描述'}">`);
+            }
+
+            if (!data.ogImage) {
+                suggestions.push(`<meta property="og:image" content="https://example.com/og-image.png">`);
+            }
+
+            const suggestionSection = document.getElementById('suggestionSection');
+            const suggestionCode = document.getElementById('suggestionCode');
+
+            if (suggestions.length > 0) {
+                suggestionSection.classList.remove('hidden');
+                suggestionCode.textContent = suggestions.join('\n');
+            } else {
+                suggestionSection.classList.add('hidden');
+            }
+        }
+
+        // 复制代码
+        function copyCode() {
+            const code = document.getElementById('suggestionCode').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                showToast('代码已复制到剪贴板', 'success');
+            }).catch(() => {
+                showToast('复制失败，请手动复制', 'error');
+            });
+        }
+
+        // 清除结果
+        function clearResults() {
+            document.getElementById('resultArea').classList.add('hidden');
+            document.getElementById('urlInput').value = '';
+            document.getElementById('keywordInput').value = '';
+        }
+
+        // 设置加载状态
+        function setLoading(loading) {
+            const btn = document.getElementById('auditBtn');
+            const btnText = document.getElementById('btnText');
+            const btnIcon = document.getElementById('btnIcon');
+            const loadingState = document.getElementById('loadingState');
+
+            if (loading) {
+                btn.disabled = true;
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+                btnText.textContent = '分析中...';
+                btnIcon.textContent = '⏳';
+                loadingState.classList.remove('hidden');
+                document.getElementById('resultArea').classList.add('hidden');
+            } else {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                btnText.textContent = '开始分析';
+                btnIcon.textContent = '🚀';
+                loadingState.classList.add('hidden');
+            }
+        }
+
+        // 更新加载提示
+        function updateLoadingTip(tip) {
+            document.getElementById('loadingTip').textContent = tip;
+        }
+
+        // Toast 提示
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${type === 'success' ? 'bg-green-600' :
+                type === 'error' ? 'bg-red-600' :
+                    'bg-purple-600'
+                } text-white font-medium animate-pulse`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // 回车触发分析
+        document.getElementById('urlInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                runAudit();
+            }
+        });
+    </script>
+</body>
+
+</html>

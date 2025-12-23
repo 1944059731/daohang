@@ -207,17 +207,20 @@ function createCard(item) {
     // 生成图片加载失败时的回退处理代码
     const fallbackHandler = `onerror="this.style.display='none';this.nextElementSibling.style.display='inline';" onload="if(this.naturalWidth<2||this.naturalHeight<2){this.style.display='none';this.nextElementSibling.style.display='inline';}"`;
 
+    // 更具描述性的 alt 文本
+    const altText = `${item.name} 网站图标`;
+
     if (customIconUrl) {
         // 有自定义图标URL时，优先使用自定义图标，失败时显示Emoji
-        iconHtml = `<img src="${customIconUrl}" alt="${item.name}" class="w-6 h-6 rounded" loading="lazy" decoding="async" width="24" height="24" ${fallbackHandler}>
-           <span class="text-2xl" style="display:none">${emojiIcon}</span>`;
+        iconHtml = `<img src="${customIconUrl}" alt="${altText}" title="${item.name}" class="w-6 h-6 rounded" loading="lazy" decoding="async" width="24" height="24" ${fallbackHandler}>
+           <span class="text-2xl" style="display:none" aria-hidden="true">${emojiIcon}</span>`;
     } else if (faviconUrl) {
         // 没有自定义图标时，使用 Google Favicon，失败时显示Emoji
-        iconHtml = `<img src="${faviconUrl}" alt="${item.name}" class="w-6 h-6 rounded" loading="lazy" decoding="async" width="24" height="24" ${fallbackHandler}>
-           <span class="text-2xl" style="display:none">${emojiIcon}</span>`;
+        iconHtml = `<img src="${faviconUrl}" alt="${altText}" title="${item.name}" class="w-6 h-6 rounded" loading="lazy" decoding="async" width="24" height="24" ${fallbackHandler}>
+           <span class="text-2xl" style="display:none" aria-hidden="true">${emojiIcon}</span>`;
     } else {
         // 都没有，直接显示 Emoji
-        iconHtml = `<span class="text-2xl">${emojiIcon}</span>`;
+        iconHtml = `<span class="text-2xl" role="img" aria-label="${item.name}">${emojiIcon}</span>`;
     }
 
     return `

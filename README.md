@@ -1,5 +1,7 @@
 # 机场导航站
 
+**🇨🇳 中文** | [🇬🇧 English](README_EN.md)
+
 一个采用玻璃拟态（Glassmorphism）设计风格的机场导航站，纯静态页面，支持动态数据管理，可直接部署到 Cloudflare Pages。
 
 ## 📸 预览

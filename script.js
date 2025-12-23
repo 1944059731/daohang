@@ -360,9 +360,15 @@ function initNavigation() {
     const navButtons = document.querySelectorAll('.nav-btn');
 
     // 页面加载时默认激活第一个导航按钮（常用工具）
-    if (navButtons.length > 0) {
-        navButtons[0].classList.add('active');
+    function setFirstButtonActive() {
+        navButtons.forEach(b => b.classList.remove('active'));
+        if (navButtons.length > 0) {
+            navButtons[0].classList.add('active');
+        }
     }
+
+    // 初始化时激活第一个按钮
+    setFirstButtonActive();
 
     navButtons.forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -382,6 +388,12 @@ function initNavigation() {
     };
 
     const observer = new IntersectionObserver((entries) => {
+        // 当页面在顶部时，始终激活第一个按钮
+        if (window.scrollY < 100) {
+            setFirstButtonActive();
+            return;
+        }
+
         entries.forEach(entry => {
             if (entry.isIntersecting) {
                 const id = entry.target.id;
@@ -398,6 +410,13 @@ function initNavigation() {
     }, observerOptions);
 
     sections.forEach(section => observer.observe(section));
+
+    // 添加滚动监听，确保页面回到顶部时激活第一个按钮
+    window.addEventListener('scroll', () => {
+        if (window.scrollY < 100) {
+            setFirstButtonActive();
+        }
+    }, { passive: true });
 }
 
 // 页面加载完成后初始化

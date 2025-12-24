@@ -1,3 +1,121 @@
+// ========================================
+// 智能图标代理系统
+// ========================================
+
+// 网络环境状态：null=未检测, true=国内, false=国外
+let isChina = null;
+
+// 图标代理服务配置
+const FAVICON_PROXIES = {
+    // 国内优先服务列表
+    china: [
+        { name: 'bqb.cool', getUrl: (url, domain) => `https://icon.bqb.cool?url=${encodeURIComponent(url)}` },
+        { name: 'Google', getUrl: (url, domain) => `https://www.google.com/s2/favicons?domain=${domain}&sz=64` },
+    ],
+    // 国外优先服务列表  
+    global: [
+        { name: 'Google', getUrl: (url, domain) => `https://www.google.com/s2/favicons?domain=${domain}&sz=64` },
+        { name: 'bqb.cool', getUrl: (url, domain) => `https://icon.bqb.cool?url=${encodeURIComponent(url)}` },
+    ]
+};
+
+/**
+ * 检测当前网络环境（国内/国外）
+ * 通过尝试访问 Google 判断，超时或失败则判定为国内
+ */
+async function detectNetworkEnvironment() {
+    if (isChina !== null) return isChina;
+
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+
+        await fetch('https://www.google.com/favicon.ico', {
+            mode: 'no-cors',
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+        isChina = false; // 能访问 Google，判定为国外
+    } catch {
+        isChina = true; // 无法访问，判定为国内
+    }
+
+    console.log(`🌍 网络环境检测: ${isChina ? '国内网络' : '国外网络'}`);
+    return isChina;
+}
+
+/**
+ * 获取当前环境下的代理服务列表
+ */
+function getFaviconProxies() {
+    return isChina ? FAVICON_PROXIES.china : FAVICON_PROXIES.global;
+}
+
+/**
+ * 生成带多级回退的图标URLs
+ * @param {string} url - 网站URL
+ * @returns {object} 包含主URL和备用URLs的对象
+ */
+function getSmartFaviconUrls(url) {
+    try {
+        const urlObj = new URL(url);
+        const domain = urlObj.hostname;
+        const fullUrl = urlObj.href;
+        const proxies = getFaviconProxies();
+
+        return {
+            urls: proxies.map(p => p.getUrl(fullUrl, domain)),
+            domain: domain
+        };
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * 图标加载错误处理 - 尝试下一个备用代理
+ * @param {HTMLImageElement} img - 图片元素
+ */
+function handleIconError(img) {
+    const fallbacksAttr = img.getAttribute('data-fallbacks');
+    const fallbackIndex = parseInt(img.getAttribute('data-fallback-index') || '0');
+
+    if (fallbacksAttr) {
+        try {
+            const fallbacks = JSON.parse(fallbacksAttr);
+            if (fallbackIndex < fallbacks.length) {
+                // 还有备用URL，尝试下一个
+                console.log(`🔄 图标加载失败，尝试备用代理 ${fallbackIndex + 1}/${fallbacks.length}`);
+                img.setAttribute('data-fallback-index', (fallbackIndex + 1).toString());
+                img.src = fallbacks[fallbackIndex];
+                return;
+            }
+        } catch (e) {
+            console.warn('解析备用URL失败:', e);
+        }
+    }
+
+    // 所有代理都失败，显示 Emoji
+    img.style.display = 'none';
+    const emoji = img.nextElementSibling;
+    if (emoji && emoji.classList.contains('favicon-emoji')) {
+        emoji.style.display = 'inline';
+    }
+}
+
+/**
+ * 图标加载成功处理 - 检测空白图标
+ * @param {HTMLImageElement} img - 图片元素
+ */
+function handleIconLoad(img) {
+    // 检测是否为空白/无效图标（小于2x2像素）
+    if (img.naturalWidth < 2 || img.naturalHeight < 2) {
+        handleIconError(img);
+    }
+}
+
+// ========================================
 // 导航站数据 - 默认数据（API 不可用时的降级方案）
 const defaultSiteData = {
     common: [
@@ -168,6 +286,9 @@ let siteData = null;
 
 // 从 API 加载数据
 async function loadSiteData() {
+    // 先检测网络环境（用于智能选择图标代理）
+    await detectNetworkEnvironment();
+
     try {
         const response = await fetch('/api/sites');
         if (response.ok) {
@@ -195,29 +316,23 @@ function getFaviconUrl(url, size = 32) {
     }
 }
 
-// 生成卡片 HTML
+// 生成卡片 HTML（使用智能图标代理系统）
 function createCard(item) {
-    const faviconUrl = getFaviconUrl(item.url);
+    const smartFavicons = getSmartFaviconUrls(item.url);
     const customIconUrl = item.iconUrl || ''; // 自定义图标URL
     const emojiIcon = item.icon || '🔗';
-
-    // 优先级：自定义图标URL（如有）→ Google Favicon → Emoji
-    let iconHtml;
-
-    // 生成图片加载失败时的回退处理代码
-    const fallbackHandler = `onerror="this.style.display='none';this.nextElementSibling.style.display='inline';" onload="if(this.naturalWidth<2||this.naturalHeight<2){this.style.display='none';this.nextElementSibling.style.display='inline';}"`;
-
-    // 更具描述性的 alt 文本
     const altText = `${item.name} 网站图标`;
 
+    let iconHtml;
+
     if (customIconUrl) {
-        // 有自定义图标URL时，优先使用自定义图标，失败时显示Emoji
-        iconHtml = `<img src="${customIconUrl}" alt="${altText}" title="${item.name}" class="w-6 h-6 rounded" loading="lazy" decoding="async" width="24" height="24" ${fallbackHandler}>
-           <span class="text-2xl" style="display:none" aria-hidden="true">${emojiIcon}</span>`;
-    } else if (faviconUrl) {
-        // 没有自定义图标时，使用 Google Favicon，失败时显示Emoji
-        iconHtml = `<img src="${faviconUrl}" alt="${altText}" title="${item.name}" class="w-6 h-6 rounded" loading="lazy" decoding="async" width="24" height="24" ${fallbackHandler}>
-           <span class="text-2xl" style="display:none" aria-hidden="true">${emojiIcon}</span>`;
+        // 有自定义图标URL时，优先使用自定义图标
+        // 失败时尝试智能代理，最后回退到 Emoji
+        const fallbackUrls = smartFavicons ? smartFavicons.urls : [];
+        iconHtml = createMultiFallbackIcon(customIconUrl, fallbackUrls, emojiIcon, altText, item.name);
+    } else if (smartFavicons) {
+        // 使用智能代理系统获取图标（多级回退）
+        iconHtml = createMultiFallbackIcon(smartFavicons.urls[0], smartFavicons.urls.slice(1), emojiIcon, altText, item.name);
     } else {
         // 都没有，直接显示 Emoji
         iconHtml = `<span class="text-2xl" role="img" aria-label="${item.name}">${emojiIcon}</span>`;
@@ -243,6 +358,39 @@ function createCard(item) {
                 </div>
             </div>
         </a>
+    `;
+}
+
+/**
+ * 创建带多级回退的图标 HTML
+ * @param {string} primaryUrl - 主图标URL
+ * @param {string[]} fallbackUrls - 备用图标URL列表
+ * @param {string} emoji - 最终回退的Emoji
+ * @param {string} altText - 图片alt文本
+ * @param {string} title - 图片title
+ */
+function createMultiFallbackIcon(primaryUrl, fallbackUrls, emoji, altText, title) {
+    // 生成唯一ID用于回退逻辑
+    const iconId = 'icon_' + Math.random().toString(36).substr(2, 9);
+
+    // 构建回退数据属性
+    const fallbackData = fallbackUrls.length > 0 ?
+        `data-fallbacks='${JSON.stringify(fallbackUrls)}' data-fallback-index="0"` : '';
+
+    return `
+        <img id="${iconId}" 
+             src="${primaryUrl}" 
+             alt="${altText}" 
+             title="${title}" 
+             class="w-6 h-6 rounded favicon-smart" 
+             loading="lazy" 
+             decoding="async" 
+             width="24" 
+             height="24"
+             ${fallbackData}
+             onerror="handleIconError(this)"
+             onload="handleIconLoad(this)">
+        <span class="text-2xl favicon-emoji" style="display:none" aria-hidden="true">${emoji}</span>
     `;
 }
 

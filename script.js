@@ -7,15 +7,20 @@ let isChina = null;
 
 // 图标代理服务配置
 const FAVICON_PROXIES = {
-    // 国内优先服务列表
+    // 国内优先服务列表（按可用性排序）
     china: [
         { name: 'bqb.cool', getUrl: (url, domain) => `https://icon.bqb.cool?url=${encodeURIComponent(url)}` },
+        { name: 'DuckDuckGo', getUrl: (url, domain) => `https://icons.duckduckgo.com/ip3/${domain}.ico` },
+        { name: 'Favicone', getUrl: (url, domain) => `https://favicone.com/${domain}?s=64` },
+        { name: 'Direct', getUrl: (url, domain) => `https://${domain}/favicon.ico` },
         { name: 'Google', getUrl: (url, domain) => `https://www.google.com/s2/favicons?domain=${domain}&sz=64` },
     ],
     // 国外优先服务列表  
     global: [
         { name: 'Google', getUrl: (url, domain) => `https://www.google.com/s2/favicons?domain=${domain}&sz=64` },
+        { name: 'DuckDuckGo', getUrl: (url, domain) => `https://icons.duckduckgo.com/ip3/${domain}.ico` },
         { name: 'bqb.cool', getUrl: (url, domain) => `https://icon.bqb.cool?url=${encodeURIComponent(url)}` },
+        { name: 'Direct', getUrl: (url, domain) => `https://${domain}/favicon.ico` },
     ]
 };
 
